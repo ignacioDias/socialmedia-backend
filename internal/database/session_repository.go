@@ -9,17 +9,23 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type SessionRepository struct {
+type SessionRepository interface {
+	CreateSession(ctx context.Context, session *models.Session) error
+	FindSessionByID(ctx context.Context, id string) (*models.Session, error)
+	DeleteSessionByID(ctx context.Context, id string) error
+	DeleteSessionsByUserID(ctx context.Context, userID int64) error
+}
+type sessionRepository struct {
 	db *sqlx.DB
 }
 
 var ErrSessionNotFound = errors.New("Session not found")
 
-func NewSessionRepository(db *sqlx.DB) *SessionRepository {
-	return &SessionRepository{db: db}
+func NewSessionRepository(db *sqlx.DB) SessionRepository {
+	return &sessionRepository{db: db}
 }
 
-func (sessRepo *SessionRepository) CreateSession(ctx context.Context, session *models.Session) error {
+func (sessRepo *sessionRepository) CreateSession(ctx context.Context, session *models.Session) error {
 	query := `
 	INSERT INTO sessions (id, user_id, expires_at)
 	VALUES (:id, :user_id, :expires_at)
@@ -32,7 +38,7 @@ func (sessRepo *SessionRepository) CreateSession(ctx context.Context, session *m
 	return stmt.GetContext(ctx, session, session)
 }
 
-func (sessRepo *SessionRepository) FindSessionByID(ctx context.Context, id string) (*models.Session, error) {
+func (sessRepo *sessionRepository) FindSessionByID(ctx context.Context, id string) (*models.Session, error) {
 	var session models.Session
 	query := "SELECT id, user_id, created_at, expires_at FROM sessions WHERE id = $1 AND expires_at > (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')"
 	if err := sessRepo.db.GetContext(ctx, &session, query, id); err != nil {
@@ -44,13 +50,13 @@ func (sessRepo *SessionRepository) FindSessionByID(ctx context.Context, id strin
 	return &session, nil
 }
 
-func (sessRepo *SessionRepository) DeleteSessionByID(ctx context.Context, id string) error {
+func (sessRepo *sessionRepository) DeleteSessionByID(ctx context.Context, id string) error {
 	query := "DELETE FROM sessions WHERE id = $1"
 	result, err := sessRepo.db.ExecContext(ctx, query, id)
 	return CheckErrResult(result, err, ErrSessionNotFound)
 }
 
-func (sessRepo *SessionRepository) DeleteSessionsByUserID(ctx context.Context, userID int64) error {
+func (sessRepo *sessionRepository) DeleteSessionsByUserID(ctx context.Context, userID int64) error {
 	query := "DELETE FROM sessions WHERE user_id = $1"
 	result, err := sessRepo.db.ExecContext(ctx, query, userID)
 	return CheckErrResult(result, err, ErrSessionNotFound)

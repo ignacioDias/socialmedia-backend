@@ -32,6 +32,15 @@ func (rr *repostRepository) CreateRepost(ctx context.Context, repost *models.Rep
 	return err
 }
 
+func (rr *repostRepository) GetPostsFromUsersReposts(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
+	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at FROM reposts r INNER JOIN posts p ON r.post_id = p.post_id WHERE l.user_id = $1 ORDER BY l.created_at DESC LIMIT $2 OFFSET $3`
+	var posts []models.Post
+	if err := rr.db.SelectContext(ctx, &posts, query, userID, models.PostTarget, limit, offset); err != nil {
+		return nil, err
+	}
+	return posts, nil
+}
+
 func (rr *repostRepository) GetRepostsCountFromPost(ctx context.Context, postID int64) (int64, error) {
 	query := `SELECT COUNT(*) FROM reposts WHERE post_id = $1`
 	var cantReposts int64

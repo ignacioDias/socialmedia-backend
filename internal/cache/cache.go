@@ -33,12 +33,12 @@ func (c *Cache) Get(key string, dest any) error {
 	return json.Unmarshal([]byte(val), dest)
 }
 
-func (c *Cache) Set(key string, value any, expiraton time.Duration) error {
+func (c *Cache) Set(key string, value any, expiration time.Duration) error {
 	val, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
-	return c.client.Set(c.ctx, key, val, expiraton).Err()
+	return c.client.Set(c.ctx, key, val, expiration).Err()
 }
 
 func (c *Cache) Delete(key string) error {

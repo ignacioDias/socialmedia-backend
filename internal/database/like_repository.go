@@ -10,9 +10,9 @@ import (
 
 type LikeRepository interface {
 	CreateLike(ctx context.Context, like *models.Like) error
+	GetPostsFromUsersLikes(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error)
 	GetLikesCountFromTarget(ctx context.Context, targetID int64, targetType models.TargetType) (int64, error)
 	DeleteLike(ctx context.Context, like *models.Like) error
-	GetPostsFromUsersLikes(ctx context.Context, userID int64) ([]models.Post, error)
 }
 
 var ErrLikeNotFound = errors.New("Like not found")
@@ -33,10 +33,10 @@ func (lr *likeRepository) CreateLike(ctx context.Context, like *models.Like) err
 	return err
 }
 
-func (lr *likeRepository) GetPostsFromUsersLikes(ctx context.Context, userID int64) ([]models.Post, error) {
-	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at FROM likes l INNER JOIN posts p ON l.target_id = p.post_id WHERE l.user_id = $1 AND l.target_type = $2 ORDER BY l.created_at DESC`
+func (lr *likeRepository) GetPostsFromUsersLikes(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
+	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at FROM likes l INNER JOIN posts p ON l.target_id = p.post_id WHERE l.user_id = $1 AND l.target_type = $2 ORDER BY l.created_at DESC LIMIT $3 OFFSET $4`
 	var posts []models.Post
-	if err := lr.db.SelectContext(ctx, &posts, query, userID, models.PostTarget); err != nil {
+	if err := lr.db.SelectContext(ctx, &posts, query, userID, models.PostTarget, limit, offset); err != nil {
 		return nil, err
 	}
 	return posts, nil
