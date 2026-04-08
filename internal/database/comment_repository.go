@@ -29,8 +29,8 @@ func NewCommentRepository(db *sqlx.DB) CommentRepository {
 }
 
 func (cr *commentRepository) CreateComment(ctx context.Context, comment *models.Comment) error {
-	query := `INSERT INTO comments (target_id, target_type, user_id, content) VALUES ($1, $2, $3, $4) RETURNING comment_id`
-	return cr.db.QueryRowContext(ctx, query, comment.TargetID, comment.TargetType, comment.UserID, comment.Content).Scan(&comment.CommentID)
+	query := `INSERT INTO comments (target_id, target_type, user_id, content, image_path) VALUES ($1, $2, $3, $4, $5) RETURNING comment_id`
+	return cr.db.QueryRowContext(ctx, query, comment.TargetID, comment.TargetType, comment.UserID, comment.Content, comment.ImagePath).Scan(&comment.CommentID)
 }
 
 func (cr *commentRepository) GetCommentByID(ctx context.Context, commentID int64) (*models.Comment, error) {
@@ -46,7 +46,7 @@ func (cr *commentRepository) GetCommentByID(ctx context.Context, commentID int64
 }
 
 func (cr *commentRepository) GetCommentsFromTarget(ctx context.Context, targetType models.TargetType, targetID int64, limit, offset int) ([]models.Comment, error) {
-	query := `SELECT comment_id, target_id, target_type, user_id, content, created_at FROM comments WHERE target_type = $1 AND target_id = $2 ORDER BY created_at ASC LIMIT $3 OFFSET $4`
+	query := `SELECT comment_id, target_id, target_type, user_id, content, created_at, image_path FROM comments WHERE target_type = $1 AND target_id = $2 ORDER BY created_at ASC LIMIT $3 OFFSET $4`
 	var comments []models.Comment
 	if err := cr.db.SelectContext(ctx, &comments, query, targetType, targetID, limit, offset); err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (cr *commentRepository) GetCommentsFromTarget(ctx context.Context, targetTy
 }
 
 func (cr *commentRepository) GetCommentsFromUser(ctx context.Context, userID int64, limit, offset int) ([]models.Comment, error) {
-	query := `SELECT comment_id, target_id, target_type, user_id, content, created_at FROM comments WHERE user_id = $1 ORDER BY created_at ASC LIMIT $2 OFFSET $3`
+	query := `SELECT comment_id, target_id, target_type, user_id, content, created_at, image_path FROM comments WHERE user_id = $1 ORDER BY created_at ASC LIMIT $2 OFFSET $3`
 	var comments []models.Comment
 	if err := cr.db.SelectContext(ctx, &comments, query, userID, limit, offset); err != nil {
 		return nil, err

@@ -27,13 +27,13 @@ func NewRepostRepository(db *sqlx.DB) RepostRepository {
 }
 
 func (rr *repostRepository) CreateRepost(ctx context.Context, repost *models.Repost) error {
-	query := `INSERT INTO reposts (post_id, user_id, content) VALUES ($1, $2, $3)`
-	_, err := rr.db.ExecContext(ctx, query, repost.PostID, repost.UserID, repost.Content)
+	query := `INSERT INTO reposts (post_id, user_id, content, image_path) VALUES ($1, $2, $3, $4)`
+	_, err := rr.db.ExecContext(ctx, query, repost.PostID, repost.UserID, repost.Content, repost.ImagePath)
 	return err
 }
 
 func (rr *repostRepository) GetPostsFromUsersReposts(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
-	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at FROM reposts r INNER JOIN posts p ON r.post_id = p.post_id WHERE r.user_id = $1 ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`
+	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at, p.image_path FROM reposts r INNER JOIN posts p ON r.post_id = p.post_id WHERE r.user_id = $1 ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`
 	var posts []models.Post
 	if err := rr.db.SelectContext(ctx, &posts, query, userID, models.PostTarget, limit, offset); err != nil {
 		return nil, err

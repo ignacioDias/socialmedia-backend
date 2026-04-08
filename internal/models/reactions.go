@@ -14,7 +14,7 @@ type Repost struct {
 	UserID    int64     `db:"user_id" json:"userId"`
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`
 	Content   string    `db:"content" json:"content"`
-	//TODO: Image
+	ImagePath string    `db:"image_path" json:"imagePath"`
 }
 
 type Bookmark struct {
@@ -32,10 +32,11 @@ func NewLike(targetID int64, targetType TargetType, userID int64) *Like {
 	}
 }
 
-func NewRepost(postID int64, userID int64, content string) *Repost {
+func NewRepost(postID int64, userID int64, imagePath, content string) *Repost {
 	return &Repost{
 		PostID:    postID,
 		UserID:    userID,
+		ImagePath: imagePath,
 		Content:   content,
 		CreatedAt: time.Now(),
 	}

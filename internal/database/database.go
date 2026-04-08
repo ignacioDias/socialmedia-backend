@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS posts (
 	post_id BIGSERIAL PRIMARY KEY,
 	user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
 	title TEXT NOT NULL,
+	image_path TEXT,
 	content TEXT NOT NULL,
 	created_at TIMESTAMPTZ DEFAULT NOW()
 );`
@@ -28,6 +29,7 @@ var createCommentsTable = `
 CREATE TABLE IF NOT EXISTS comments(
 	comment_id BIGSERIAL PRIMARY KEY,
 	target_id BIGINT NOT NULL,
+	image_path TEXT,
 	target_type TEXT NOT NULL,
 	user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
 	content TEXT NOT NULL,
@@ -47,7 +49,8 @@ var createRepostsTable = `
 CREATE TABLE IF NOT EXISTS reposts(
 	post_id BIGINT NOT NULL,
 	user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-	content TEXT NOT NULL,
+	content TEXT,
+	image_path TEXT,
 	created_at TIMESTAMPTZ DEFAULT NOW()
     PRIMARY KEY (post_id, user_id)
 )`
