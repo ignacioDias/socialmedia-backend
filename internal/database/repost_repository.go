@@ -33,7 +33,7 @@ func (rr *repostRepository) CreateRepost(ctx context.Context, repost *models.Rep
 }
 
 func (rr *repostRepository) GetPostsFromUsersReposts(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
-	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at FROM reposts r INNER JOIN posts p ON r.post_id = p.post_id WHERE l.user_id = $1 ORDER BY l.created_at DESC LIMIT $2 OFFSET $3`
+	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at FROM reposts r INNER JOIN posts p ON r.post_id = p.post_id WHERE r.user_id = $1 ORDER BY r.created_at DESC LIMIT $2 OFFSET $3`
 	var posts []models.Post
 	if err := rr.db.SelectContext(ctx, &posts, query, userID, models.PostTarget, limit, offset); err != nil {
 		return nil, err

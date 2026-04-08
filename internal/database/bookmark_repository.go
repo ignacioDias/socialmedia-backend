@@ -35,7 +35,9 @@ func (br *bookmarkRepository) GetPostsFromUsersBookmark(ctx context.Context, use
 	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at 
           FROM posts p 
           INNER JOIN bookmarks b ON p.post_id = b.post_id 
-          WHERE b.user_id = $1`
+          WHERE b.user_id = $1
+		  ORDER BY b.created_at DESC
+		  `
 	var posts []models.Post
 	if err := br.db.SelectContext(ctx, &posts, query, userID); err != nil {
 		return nil, err
