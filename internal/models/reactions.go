@@ -3,7 +3,6 @@ package models
 import "time"
 
 type Like struct {
-	LikeID     int64      `db:"like_id" json:"likeId"`
 	TargetID   int64      `db:"target_id" json:"targetId"`
 	TargetType TargetType `db:"target_type" json:"targetType"`
 	UserID     int64      `db:"user_id" json:"userId"`

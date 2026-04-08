@@ -10,6 +10,7 @@ type Database struct {
 	db          *sqlx.DB
 	PostRepo    PostRepository
 	CommentRepo CommentRepository
+	LikeRepo    LikeRepository
 }
 
 var createPostsTable = `
@@ -31,10 +32,20 @@ CREATE TABLE IF NOT EXISTS comments(
 	created_at TIMESTAMPTZ DEFAULT NOW()
 );`
 
+var createLikesTable = `
+CREATE TABLE IF NOT EXISTS likes(
+	target_id BIGINT NOT NULL,
+	target_type TEXT NOT NULL,
+	user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+	created_at TIMESTAMPTZ DEFAULT NOW()
+    PRIMARY KEY (target_id, target_type, user_id)
+)`
+
 func NewDatabase(db *sqlx.DB) *Database {
 	return &Database{
 		db:          db,
 		PostRepo:    NewPostRepository(db),
+		LikeRepo:    NewLikeRepository(db),
 		CommentRepo: NewCommentRepository(db),
 	}
 }
@@ -54,6 +65,7 @@ func (db *Database) Init() error {
 		ddl  string
 	}{
 		{name: "posts", ddl: createPostsTable},
+		{name: "likes", ddl: createLikesTable},
 		{name: "comments", ddl: createCommentsTable},
 	}
 

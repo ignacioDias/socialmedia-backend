@@ -11,7 +11,8 @@ import (
 type LikeRepository interface {
 	CreateLike(ctx context.Context, like *models.Like) error
 	GetLikesCountFromTarget(ctx context.Context, targetID int64, targetType models.TargetType) (int64, error)
-	DeleteLikeByID(ctx context.Context, likeID int64) error
+	DeleteLike(ctx context.Context, like *models.Like) error
+	GetPostsFromUsersLikes(ctx context.Context, userID int64) ([]models.Post, error)
 }
 
 var ErrLikeNotFound = errors.New("Like not found")
@@ -27,8 +28,18 @@ func NewLikeRepository(db *sqlx.DB) LikeRepository {
 }
 
 func (lr *likeRepository) CreateLike(ctx context.Context, like *models.Like) error {
-	query := `INSERT INTO likes (target_id, target_type, user_id) VALUES ($1, $2, $3) RETURNING like_id`
-	return lr.db.QueryRowContext(ctx, query, like.TargetID, like.TargetType, like.UserID).Scan(&like.LikeID)
+	query := `INSERT INTO likes (target_id, target_type, user_id) VALUES ($1, $2, $3)`
+	_, err := lr.db.ExecContext(ctx, query, like.TargetID, like.TargetType, like.UserID)
+	return err
+}
+
+func (lr *likeRepository) GetPostsFromUsersLikes(ctx context.Context, userID int64) ([]models.Post, error) {
+	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at FROM likes l INNER JOIN posts p ON l.target_id = p.post_id WHERE l.user_id = $1 AND l.target_type = $2 ORDER BY l.created_at DESC`
+	var posts []models.Post
+	if err := lr.db.SelectContext(ctx, &posts, query, userID, models.PostTarget); err != nil {
+		return nil, err
+	}
+	return posts, nil
 }
 
 func (lr *likeRepository) GetLikesCountFromTarget(ctx context.Context, targetID int64, targetType models.TargetType) (int64, error) {
@@ -38,8 +49,8 @@ func (lr *likeRepository) GetLikesCountFromTarget(ctx context.Context, targetID 
 	return cantLikes, err
 }
 
-func (lr *likeRepository) DeleteLikeByID(ctx context.Context, likeID int64) error {
-	query := `DELETE FROM likes WHERE like_id = $1`
-	result, err := lr.db.ExecContext(ctx, query, likeID)
+func (lr *likeRepository) DeleteLike(ctx context.Context, like *models.Like) error {
+	query := `DELETE FROM likes WHERE target_type = $1 AND target_id = $2 AND user_id = $3`
+	result, err := lr.db.ExecContext(ctx, query, like.TargetType, like.TargetID, like.UserID)
 	return CheckErrResult(result, err, ErrLikeNotFound)
 }
