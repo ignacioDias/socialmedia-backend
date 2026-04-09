@@ -4,14 +4,9 @@ import "time"
 
 type Conversation struct {
 	ConversationID int64     `db:"conversation_id" json:"conversationId"`
-	CreatedAt      time.Time `db:"created_at" json:"createdAt"`
+	User1ID        int64     `db:"user1_id" json:"user1Id"`
+	User2ID        int64     `db:"user2_id" json:"user2Id"`
 	LastMessageAt  time.Time `db:"last_message_at" json:"lastMessageAt"`
-}
-
-type ConversationMember struct {
-	ConversationID int64     `db:"conversation_id" json:"conversationId"`
-	UserID         int64     `db:"user_id" json:"userId"`
-	JoinedAt       time.Time `db:"joined_at" json:"joinedAt"`
 }
 
 type Message struct {
@@ -23,20 +18,11 @@ type Message struct {
 	CreatedAt      time.Time `db:"created_at" json:"createdAt"`
 }
 
-func NewConversation() Conversation {
-	now := time.Now().UTC()
-	return Conversation{
-		CreatedAt:     now,
-		LastMessageAt: now,
+func NewConversation(userAID, userBID int64) *Conversation {
+	if userAID > userBID {
+		userAID, userBID = userBID, userAID
 	}
-}
-
-func NewConversationMember(conversationID, userID int64) ConversationMember {
-	return ConversationMember{
-		ConversationID: conversationID,
-		UserID:         userID,
-		JoinedAt:       time.Now().UTC(),
-	}
+	return &Conversation{User1ID: userAID, User2ID: userBID}
 }
 
 func NewMessage(conversationID, senderID int64, content, imagePath string) Message {
