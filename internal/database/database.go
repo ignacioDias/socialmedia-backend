@@ -9,13 +9,24 @@ import (
 type Database struct {
 	db          *sqlx.DB
 	PostRepo    PostRepository
+	FollowRepo  FollowRepository
 	RepostRepo  RepostRepository
 	SessionRepo SessionRepository
 	CommentRepo CommentRepository
 	LikeRepo    LikeRepository
 	MessageRepo MessageRepository
+	UserRepo    UserRepository
 }
 
+var createUsersTable = `
+CREATE TABLE IF NOT EXISTS users (
+	user_id BIGSERIAL PRIMARY KEY,
+	username TEXT NOT NULL UNIQUE,
+	email TEXT NOT NULL UNIQUE,
+	hashed_password TEXT NOT NULL,
+	profile_picture_path TEXT NOT NULL, 
+	banner_path TEXT NOT NULL
+);`
 var createPostsTable = `
 CREATE TABLE IF NOT EXISTS posts (
 	post_id BIGSERIAL PRIMARY KEY,
@@ -42,17 +53,24 @@ CREATE TABLE IF NOT EXISTS likes(
 	target_id BIGINT NOT NULL,
 	target_type TEXT NOT NULL,
 	user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-	created_at TIMESTAMPTZ DEFAULT NOW()
+	created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (target_id, target_type, user_id)
 );`
 
+var createFollowsTable = `
+CREATE TABLE IF NOT EXISTS follows(
+	following_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+	follower_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	PRIMARY KEY (follower_id, following_id)
+);`
 var createRepostsTable = `
 CREATE TABLE IF NOT EXISTS reposts(
 	post_id BIGINT NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
 	user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
 	content TEXT,
 	image_path TEXT,
-	created_at TIMESTAMPTZ DEFAULT NOW()
+	created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (post_id, user_id)
 )`
 
@@ -84,6 +102,7 @@ func NewDatabase(db *sqlx.DB) *Database {
 		RepostRepo:  NewRepostRepository(db),
 		CommentRepo: NewCommentRepository(db),
 		MessageRepo: NewMessageRepository(db),
+		UserRepo:    NewUserRepository(db),
 	}
 }
 
@@ -101,11 +120,13 @@ func (db *Database) Init() error {
 		name string
 		ddl  string
 	}{
+		{name: "users", ddl: createUsersTable},
 		{name: "posts", ddl: createPostsTable},
 		{name: "likes", ddl: createLikesTable},
 		{name: "reposts", ddl: createRepostsTable},
 		{name: "comments", ddl: createCommentsTable},
 		{name: "conversations", ddl: createConversationsTable},
+		{name: "follows", ddl: createFollowsTable},
 		{name: "messages", ddl: createMessagesTable},
 	}
 
