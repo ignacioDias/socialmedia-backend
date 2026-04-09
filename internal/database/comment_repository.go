@@ -64,7 +64,7 @@ func (cr *commentRepository) GetCommentsFromUser(ctx context.Context, userID int
 }
 
 func (cr *commentRepository) DeleteCommentByID(ctx context.Context, commentID int) error {
-	query := `DELETE FROM comments WHERE comment_id = $1`
-	result, err := cr.db.ExecContext(ctx, query, commentID)
+	query := `DELETE FROM comments WHERE comment_id = $1 OR (target_id = $1 AND target_type = $2)`
+	result, err := cr.db.ExecContext(ctx, query, commentID, models.CommentTarget)
 	return CheckErrResult(result, err, ErrCommentNotFound)
 }

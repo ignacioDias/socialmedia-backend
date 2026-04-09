@@ -16,7 +16,7 @@ func NewPost(userID int64, title string, imagePath, content string) *Post {
 		UserID:    userID,
 		Title:     title,
 		Content:   content,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 		ImagePath: imagePath,
 	}
 }

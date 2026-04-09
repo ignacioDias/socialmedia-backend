@@ -18,7 +18,7 @@ func NewComment(targetID int64, targetType TargetType, userID int64, content str
 		TargetType: targetType,
 		UserID:     userID,
 		Content:    content,
-		CreatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
 		ImagePath:  imagePath,
 	}
 }

@@ -28,7 +28,7 @@ func NewLike(targetID int64, targetType TargetType, userID int64) *Like {
 		TargetID:   targetID,
 		TargetType: targetType,
 		UserID:     userID,
-		CreatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
 	}
 }
 
@@ -38,7 +38,7 @@ func NewRepost(postID int64, userID int64, imagePath, content string) *Repost {
 		UserID:    userID,
 		ImagePath: imagePath,
 		Content:   content,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 }
 
@@ -46,6 +46,6 @@ func NewBookmark(postID int64, userID int64) *Bookmark {
 	return &Bookmark{
 		PostID:    postID,
 		UserID:    userID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 }
