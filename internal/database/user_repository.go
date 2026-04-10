@@ -14,6 +14,8 @@ var ErrUserNotFound = errors.New("user not found")
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByID(ctx context.Context, userID int64) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	UpdateUserInfo(ctx context.Context, user *models.User) error
 	UpdateUserProfilePicture(ctx context.Context, profilePicturePath string, userID int64) error
 	UpdateUserBanner(ctx context.Context, bannerPath string, userID int64) error
@@ -38,8 +40,22 @@ func (ur *userRepository) CreateUser(ctx context.Context, user *models.User) err
 
 func (ur *userRepository) GetUserByID(ctx context.Context, userID int64) (*models.User, error) {
 	query := `SELECT * FROM users WHERE user_id = $1`
+	return ur.getUser(ctx, query, userID)
+}
+
+func (ur *userRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	query := `SELECT * FROM users WHERE email = $1`
+	return ur.getUser(ctx, query, email)
+}
+
+func (ur *userRepository) GetUserByUsername(ctx context.Context, username string) (*models.User, error) {
+	query := `SELECT * FROM users WHERE username = $1`
+	return ur.getUser(ctx, query, username)
+}
+
+func (ur *userRepository) getUser(ctx context.Context, query string, args ...interface{}) (*models.User, error) {
 	var user models.User
-	if err := ur.db.GetContext(ctx, &user, query, userID); err != nil {
+	if err := ur.db.GetContext(ctx, &user, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrUserNotFound
 		}
