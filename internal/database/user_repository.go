@@ -16,7 +16,7 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, userID int64) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
-	UpdateUserInfo(ctx context.Context, user *models.User) error
+	UpdateUserInfo(ctx context.Context, user *models.User) (*models.User, error)
 	UpdateUserProfilePicture(ctx context.Context, profilePicturePath string, userID int64) error
 	UpdateUserBanner(ctx context.Context, bannerPath string, userID int64) error
 	UpdateUserHashedPassword(ctx context.Context, hashedPassword string, userID int64) error
@@ -64,10 +64,10 @@ func (ur *userRepository) getUser(ctx context.Context, query string, args ...int
 	return &user, nil
 }
 
-func (ur *userRepository) UpdateUserInfo(ctx context.Context, user *models.User) error {
+func (ur *userRepository) UpdateUserInfo(ctx context.Context, user *models.User) (*models.User, error) {
 	query := `UPDATE users SET username = $1, email = $2 WHERE user_id = $3`
 	result, err := ur.db.ExecContext(ctx, query, user.Username, user.Email, user.UserID)
-	return CheckErrResult(result, err, ErrUserNotFound)
+	return user, CheckErrResult(result, err, ErrUserNotFound)
 }
 
 func (ur *userRepository) UpdateUserProfilePicture(ctx context.Context, profilePicturePath string, userID int64) error {

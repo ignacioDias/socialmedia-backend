@@ -17,10 +17,32 @@ type UserLoginRequest struct {
 	Password string `json:"password"`
 }
 
+type UserRegisterRequest struct {
+	ProfilePicturePath string `json:"profilePicturePath"`
+	BannerPath         string `json:"bannerPath"`
+	Email              string `json:"email"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	ProfilePicture     string `json:"profilePicture"`
+}
+
+type UpdateInfoReq struct {
+	Username *string `json:"username"`
+	Email    *string `json:"email"`
+}
+type UpdatePasswordReq struct {
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword"`
+}
+
 type UserService interface {
-	CreateUser(ctx context.Context, user *models.User) error
+	CreateUser(ctx context.Context, userReq *UserRegisterRequest) (*models.User, error)
 	Logout(ctx context.Context, userID int64) error
 	Login(ctx context.Context, loginReq *UserLoginRequest) (*models.Session, error)
+	GetUserByID(ctx context.Context, userID int64) (*models.User, error)
+	DeleteUserByID(ctx context.Context, userID int64) error
+	UpdatePassword(ctx context.Context, userID int64, updatePassReq *UpdatePasswordReq) error
+	UpdateInfo(ctx context.Context, userID int64, updateInfoReq *UpdateInfoReq) (*models.User, error)
 }
 
 type userServiceImpl struct {
@@ -31,6 +53,9 @@ type userServiceImpl struct {
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
+var ErrInvalidEmail = errors.New("invalid email format")
+var ErrInvalidUsername = errors.New("invalid username format")
+
 func NewUserService(userRepo database.UserRepository, sessionRepo database.SessionRepository, cache *cache.Cache) UserService {
 	return &userServiceImpl{
 		userRepo:    userRepo,
@@ -39,22 +64,24 @@ func NewUserService(userRepo database.UserRepository, sessionRepo database.Sessi
 	}
 }
 
-func (s *userServiceImpl) CreateUser(ctx context.Context, user *models.User) error {
-	if !isValidEmail(user.Email) {
-		return errors.New("invalid email format")
+func (s *userServiceImpl) CreateUser(ctx context.Context, userReq *UserRegisterRequest) (*models.User, error) {
+	if !isValidEmail(userReq.Email) {
+		return nil, errors.New("invalid email format")
 	}
-	if !isValidPassword(user.Password) {
-		return errors.New("invalid password: must be 8–32 characters long and include at least one number, one special character, one uppercase letter, and one lowercase letter")
+	if !isValidPassword(userReq.Password) {
+		return nil, errors.New("invalid password: must be 8/32 characters long and include at least one number, one special character, one uppercase letter, and one lowercase letter")
 	}
-	password, err := hashPassword(user.Password)
+	if userReq.Username == "" {
+		return nil, errors.New("invalid username")
+	}
+	//TODO: profile picture + banner validations
+	password, err := hashPassword(userReq.Password)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	user.HashedPassword = string(password)
-
-	return s.userRepo.CreateUser(ctx, user)
+	user := models.NewUser(userReq.Username, userReq.Email, string(password), userReq.ProfilePicturePath, userReq.BannerPath)
+	return user, s.userRepo.CreateUser(ctx, user)
 }
-
 func (s *userServiceImpl) Login(ctx context.Context, loginReq *UserLoginRequest) (*models.Session, error) {
 	user, err := s.userRepo.GetUserByEmail(ctx, loginReq.Email)
 	if err != nil {
@@ -65,20 +92,73 @@ func (s *userServiceImpl) Login(ctx context.Context, loginReq *UserLoginRequest)
 	}
 	session := models.NewSession(user.UserID)
 	if err := s.sessionRepo.CreateSession(ctx, session); err != nil {
+		if errors.Is(err, database.ErrUserNotFound) {
+			return nil, errors.New("invalid credentials")
+		}
 		return nil, err
 	}
 	return session, nil
 }
 
 func (s *userServiceImpl) Logout(ctx context.Context, userID int64) error {
-	err := s.sessionRepo.DeleteSessionsByUserID(ctx, userID)
-	return err
+	return s.sessionRepo.DeleteSessionsByUserID(ctx, userID)
 }
 
-func isValidEmail(email string) bool {
-	return emailRegex.MatchString(email)
+func (s *userServiceImpl) GetUserByID(ctx context.Context, userID int64) (*models.User, error) {
+	return s.userRepo.GetUserByID(ctx, userID)
 }
 
+func (s *userServiceImpl) UpdatePassword(ctx context.Context, userID int64, updatePassReq *UpdatePasswordReq) error {
+	if !isValidPassword(updatePassReq.NewPassword) {
+		return errors.New("invalid password: must be 8/32 characters long and include at least one number, one special character, one uppercase letter, and one lowercase letter")
+	}
+	if ok, err := s.isPasswordCorrect(ctx, userID, updatePassReq.OldPassword); err != nil {
+		return err
+	} else if !ok {
+		return errors.New("invalid password")
+	}
+	hashedPassword, err := hashPassword(updatePassReq.NewPassword)
+	if err != nil {
+		return err
+	}
+	return s.userRepo.UpdateUserHashedPassword(ctx, string(hashedPassword), userID)
+}
+
+func (s *userServiceImpl) UpdateInfo(ctx context.Context, userID int64, updateInfoReq *UpdateInfoReq) (*models.User, error) {
+	if updateInfoReq.Email != nil && !isValidEmail(*updateInfoReq.Email) {
+		return nil, ErrInvalidEmail
+	}
+	if updateInfoReq.Username != nil && *updateInfoReq.Username == "" {
+		return nil, ErrInvalidUsername
+	}
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if updateInfoReq.Email != nil {
+		user.Email = *updateInfoReq.Email
+	}
+	if updateInfoReq.Username != nil {
+		user.Username = *updateInfoReq.Username
+	}
+	return s.userRepo.UpdateUserInfo(ctx, user)
+}
+
+func (s *userServiceImpl) DeleteUserByID(ctx context.Context, userID int64) error {
+	return s.userRepo.DeleteUserByID(ctx, userID)
+}
+
+func (s *userServiceImpl) isPasswordCorrect(ctx context.Context, userID int64, oldPassword string) (bool, error) {
+	user, err := s.GetUserByID(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	return comparePasswords(user.HashedPassword, oldPassword), nil
+}
+
+func hashPassword(password string) ([]byte, error) {
+	return bcrypt.GenerateFromPassword([]byte(password), 12)
+}
 func isValidPassword(password string) bool {
 	if len(password) < 8 || len(password) >= 32 {
 		return false
@@ -102,8 +182,8 @@ func isValidPassword(password string) bool {
 	return hasUpper && hasLower && hasDigit && hasSpecial
 }
 
-func hashPassword(password string) ([]byte, error) {
-	return bcrypt.GenerateFromPassword([]byte(password), 12)
+func isValidEmail(email string) bool {
+	return emailRegex.MatchString(email)
 }
 
 func comparePasswords(hashedPassword, password string) bool {

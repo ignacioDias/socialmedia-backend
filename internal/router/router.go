@@ -31,9 +31,10 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 
 	//user
 	r.mux.HandleFunc("GET /api/v1/users/me", r.authenticationMw.AuthenticationMiddleware(r.userHandler.GetCurrentUser))
-	r.mux.HandleFunc("PUT /api/v1/users/me", r.authenticationMw.AuthenticationMiddleware(r.userHandler.UpdateUser))
-	r.mux.HandleFunc("DELETE /api/v1/users/me", r.authenticationMw.AuthenticationMiddleware(r.userHandler.DeleteMe))
-	r.mux.HandleFunc("DELETE /api/v1/users/{user_id}", r.authCheck(r.userHandler.DeleteUser))
-
+	r.mux.HandleFunc("PUT /api/v1/users/me/info", r.authenticationMw.AuthenticationMiddleware(r.userHandler.UpdateUserInfo))
+	r.mux.HandleFunc("PUT /api/v1/users/me/password", r.authenticationMw.AuthenticationMiddleware(r.userHandler.UpdateUserPassword))
+	// r.mux.HandleFunc("PUT /api/v1/users/me/profile_picture", r.authenticationMw.AuthenticationMiddleware(r.userHandler.UpdateUserBody))
+	// r.mux.HandleFunc("PUT /api/v1/users/me/banner", r.authenticationMw.AuthenticationMiddleware(r.userHandler.UpdateUserBody))
+	r.mux.HandleFunc("DELETE /api/v1/users/me", r.authenticationMw.AuthenticationMiddleware(r.userHandler.DeleteCurrentUser))
 	return r.mux
 }
