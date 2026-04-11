@@ -18,12 +18,10 @@ type UserLoginRequest struct {
 }
 
 type UserRegisterRequest struct {
-	ProfilePicturePath string `json:"profilePicturePath"`
-	BannerPath         string `json:"bannerPath"`
-	Email              string `json:"email"`
-	Username           string `json:"username"`
-	Password           string `json:"password"`
-	ProfilePicture     string `json:"profilePicture"`
+	Email          string `json:"email"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	ProfilePicture string `json:"profilePicture"`
 }
 
 type UpdateInfoReq struct {
@@ -51,10 +49,13 @@ type userServiceImpl struct {
 	cache       *cache.Cache
 }
 
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+const DEFAULT_PROFILE_PICTURE = ""
+const DEFAULT_BANNER = ""
 
 var ErrInvalidEmail = errors.New("invalid email format")
 var ErrInvalidUsername = errors.New("invalid username format")
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 func NewUserService(userRepo database.UserRepository, sessionRepo database.SessionRepository, cache *cache.Cache) UserService {
 	return &userServiceImpl{
@@ -74,12 +75,11 @@ func (s *userServiceImpl) CreateUser(ctx context.Context, userReq *UserRegisterR
 	if userReq.Username == "" {
 		return nil, errors.New("invalid username")
 	}
-	//TODO: profile picture + banner validations
 	password, err := hashPassword(userReq.Password)
 	if err != nil {
 		return nil, err
 	}
-	user := models.NewUser(userReq.Username, userReq.Email, string(password), userReq.ProfilePicturePath, userReq.BannerPath)
+	user := models.NewUser(userReq.Username, userReq.Email, string(password), DEFAULT_PROFILE_PICTURE, DEFAULT_BANNER)
 	return user, s.userRepo.CreateUser(ctx, user)
 }
 func (s *userServiceImpl) Login(ctx context.Context, loginReq *UserLoginRequest) (*models.Session, error) {

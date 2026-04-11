@@ -7,6 +7,7 @@ import (
 	"socialnet/internal/database"
 	"socialnet/internal/middleware"
 	"socialnet/internal/service"
+	"strconv"
 )
 
 type UserHandler struct {
@@ -20,7 +21,6 @@ func NewUserHandler(userRepo database.UserRepository, sessionRepo database.Sessi
 }
 
 func (uh *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
-	//TODO: Profile picture and banner
 	var userRequest service.UserRegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
 		http.Error(w, "Invalid user data", http.StatusBadRequest)
@@ -87,6 +87,21 @@ func (uh *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, err := uh.userService.GetUserByID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	WriteResponseWithEncoder(w, user, http.StatusOK)
+}
+
+func (uh *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("user_id")
+	idValue, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid format id path value", http.StatusBadRequest)
+		return
+	}
+	user, err := uh.userService.GetUserByID(r.Context(), idValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
