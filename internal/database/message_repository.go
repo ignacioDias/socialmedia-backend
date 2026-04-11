@@ -13,9 +13,8 @@ var ErrConversationNotFound = errors.New("conversation not found")
 
 type MessageRepository interface {
 	CreateMessage(ctx context.Context, message *models.Message) error
-	DeleteMessageByID(ctx context.Context, messageID int64) error
+	DeleteMessageByID(ctx context.Context, messageID, userID int64) error
 	CreateConversation(ctx context.Context, conversation *models.Conversation) error
-	DeleteConversationByID(ctx context.Context, conversationID int64) error
 	GetConversationsFromUserID(ctx context.Context, userID int64) ([]models.Conversation, error)
 	GetMessagesFromConversation(ctx context.Context, conversationID int64, limit, offset int) ([]models.Message, error)
 }
@@ -49,21 +48,15 @@ func (mr *messageRepository) CreateMessage(ctx context.Context, message *models.
 	}
 	return tx.Commit()
 }
-func (mr *messageRepository) DeleteMessageByID(ctx context.Context, messageID int64) error {
-	query := `DELETE FROM messages WHERE message_id = $1`
-	result, err := mr.db.ExecContext(ctx, query, messageID)
+func (mr *messageRepository) DeleteMessageByID(ctx context.Context, messageID, userID int64) error {
+	query := `DELETE FROM messages WHERE message_id = $1 AND sender_id = $2`
+	result, err := mr.db.ExecContext(ctx, query, messageID, userID)
 	return CheckErrResult(result, err, ErrMessageNotFound)
 }
 
 func (mr *messageRepository) CreateConversation(ctx context.Context, conversation *models.Conversation) error {
 	query := `INSERT INTO conversations (user1_id, user2_id) VALUES ($1, $2) RETURNING conversation_id`
 	return mr.db.QueryRowContext(ctx, query, conversation.User1ID, conversation.User2ID).Scan(&conversation.ConversationID)
-}
-
-func (mr *messageRepository) DeleteConversationByID(ctx context.Context, conversationID int64) error {
-	query := `DELETE FROM conversations WHERE conversation_id = $1`
-	result, err := mr.db.ExecContext(ctx, query, conversationID)
-	return CheckErrResult(result, err, ErrConversationNotFound)
 }
 
 func (mr *messageRepository) GetConversationsFromUserID(ctx context.Context, userID int64) ([]models.Conversation, error) {

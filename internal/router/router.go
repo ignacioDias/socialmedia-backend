@@ -12,6 +12,7 @@ type Router struct {
 	mux              *http.ServeMux
 	userHandler      handler.UserHandler
 	followingHandler handler.FollowingHandler
+	messageHandler   handler.MessageHandler
 	authenticationMw *middleware.AuthenticationMiddleware
 	rateLimit        *middleware.RateLimitMiddleware
 }
@@ -49,6 +50,15 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 	r.mux.HandleFunc("GET /api/v1/users/{user_id}/followers/count", r.followingHandler.GetCantFollowers)
 	r.mux.HandleFunc("GET /api/v1/users/{user_id}/following", r.followingHandler.GetFollowing)
 	r.mux.HandleFunc("GET /api/v1/users/{user_id}/following/count", r.followingHandler.GetCantFollowing)
+
+	//message
+	r.mux.HandleFunc("POST /api/v1/chats", r.authenticationMw.AuthenticationMiddleware(r.messageHandler.CreateConversation))
+	r.mux.HandleFunc("GET /api/v1/chats/me", r.authenticationMw.AuthenticationMiddleware(r.messageHandler.GetConversationsFromUser))
+
+	r.mux.HandleFunc("DELETE /api/v1/chats/messages/{message_id}", r.authenticationMw.AuthenticationMiddleware(r.messageHandler.DeleteMessage))
+
+	r.mux.HandleFunc("GET /api/v1/chats/{chat_id}/messages", r.authenticationMw.AuthenticationMiddleware(r.messageHandler.GetMessagesFromConversation))
+	r.mux.HandleFunc("POST /api/v1/chats/{chat_id}/messages", r.authenticationMw.AuthenticationMiddleware(r.messageHandler.CreateMessage))
 
 	return r.mux
 }
