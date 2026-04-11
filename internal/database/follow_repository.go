@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"errors"
-	"fmt"
 	"socialnet/internal/models"
 
 	"github.com/jmoiron/sqlx"
@@ -13,6 +12,11 @@ var ErrFollowNotFound = errors.New("follow not found")
 
 type FollowRepository interface {
 	CreateFollow(ctx context.Context, follow *models.Follow) error
+	GetFollowersFromUserID(ctx context.Context, userID int64, limit, offset int) ([]models.User, error)
+	GetFollowingFromUserID(ctx context.Context, userID int64, limit, offset int) ([]models.User, error)
+	GetCantFollowersFromUserID(ctx context.Context, userID int64) (int, error)
+	GetCantFollowingsFromUserID(ctx context.Context, userID int64) (int, error)
+	DeleteFollow(ctx context.Context, follow *models.Follow) error
 }
 
 type followRepository struct {
@@ -30,20 +34,27 @@ func (fr *followRepository) CreateFollow(ctx context.Context, follow *models.Fol
 }
 
 func (fr *followRepository) GetFollowersFromUserID(ctx context.Context, userID int64, limit, offset int) ([]models.User, error) {
-	return fr.getUsersFromFollowRelation(ctx, userID, limit, offset, "f.follower_id = u.user_id", "f.following_id")
+	query := `
+        SELECT u.profile_picture_path, u.banner_path, u.user_id, u.username, u.email, u.hashed_password
+        FROM users u
+        INNER JOIN follows f ON f.follower_id = u.user_id
+        WHERE f.following_id = $1
+        LIMIT $2 OFFSET $3`
+
+	var users []models.User
+	if err := fr.db.SelectContext(ctx, &users, query, userID, limit, offset); err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 func (fr *followRepository) GetFollowingFromUserID(ctx context.Context, userID int64, limit, offset int) ([]models.User, error) {
-	return fr.getUsersFromFollowRelation(ctx, userID, limit, offset, "f.following_id = u.user_id", "f.follower_id")
-}
-
-func (fr *followRepository) getUsersFromFollowRelation(ctx context.Context, userID int64, limit, offset int, joinCondition, whereColumn string) ([]models.User, error) {
-	query := fmt.Sprintf(`
-		SELECT u.profile_picture_path, u.banner_path, u.user_id, u.username, u.email, u.hashed_password
-		FROM users u
-		INNER JOIN follows f ON %s
-		WHERE %s = $1
-		LIMIT $2 OFFSET $3`, joinCondition, whereColumn)
+	query := `
+        SELECT u.profile_picture_path, u.banner_path, u.user_id, u.username, u.email, u.hashed_password
+        FROM users u
+        INNER JOIN follows f ON f.following_id = u.user_id
+        WHERE f.follower_id = $1
+        LIMIT $2 OFFSET $3`
 
 	var users []models.User
 	if err := fr.db.SelectContext(ctx, &users, query, userID, limit, offset); err != nil {

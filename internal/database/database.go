@@ -101,6 +101,7 @@ func NewDatabase(db *sqlx.DB) *Database {
 		SessionRepo: NewSessionRepository(db),
 		RepostRepo:  NewRepostRepository(db),
 		CommentRepo: NewCommentRepository(db),
+		FollowRepo:  NewFollowRepository(db),
 		MessageRepo: NewMessageRepository(db),
 		UserRepo:    NewUserRepository(db),
 	}
