@@ -74,19 +74,19 @@ CREATE TABLE IF NOT EXISTS reposts(
     PRIMARY KEY (post_id, user_id)
 )`
 
-var createConversationsTable = `
-CREATE TABLE IF NOT EXISTS conversations(
-    conversation_id BIGSERIAL PRIMARY KEY,
+var createChatsTable = `
+CREATE TABLE IF NOT EXISTS chats(
+    chat_id BIGSERIAL PRIMARY KEY,
     user1_id BIGINT NOT NULL REFERENCES users(user_id),
     user2_id BIGINT NOT NULL REFERENCES users(user_id),
     last_message_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT ordered_users CHECK (user1_id < user2_id),
-    CONSTRAINT unique_conversation UNIQUE (user1_id, user2_id)
+    CONSTRAINT unique_chat UNIQUE (user1_id, user2_id)
 );`
 var createMessagesTable = `
 CREATE TABLE IF NOT EXISTS messages(
 	message_id BIGSERIAL PRIMARY KEY,
-	conversation_id BIGINT NOT NULL REFERENCES conversations(conversation_id) ON DELETE CASCADE,
+	chat_id BIGINT NOT NULL REFERENCES chats(chat_id) ON DELETE CASCADE,
 	sender_id BIGINT NOT NULL REFERENCES users(user_id),
 	image_path TEXT,
 	content TEXT,
@@ -126,7 +126,7 @@ func (db *Database) Init() error {
 		{name: "likes", ddl: createLikesTable},
 		{name: "reposts", ddl: createRepostsTable},
 		{name: "comments", ddl: createCommentsTable},
-		{name: "conversations", ddl: createConversationsTable},
+		{name: "chats", ddl: createChatsTable},
 		{name: "follows", ddl: createFollowsTable},
 		{name: "messages", ddl: createMessagesTable},
 	}

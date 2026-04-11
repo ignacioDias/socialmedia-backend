@@ -12,10 +12,10 @@ import (
 )
 
 type MessageHandler interface {
-	CreateConversation(w http.ResponseWriter, r *http.Request)
-	GetConversationsFromUser(w http.ResponseWriter, r *http.Request)
+	CreateChat(w http.ResponseWriter, r *http.Request)
+	GetChatsFromUser(w http.ResponseWriter, r *http.Request)
 	DeleteMessage(w http.ResponseWriter, r *http.Request)
-	GetMessagesFromConversation(w http.ResponseWriter, r *http.Request)
+	GetMessagesFromChat(w http.ResponseWriter, r *http.Request)
 	CreateMessage(w http.ResponseWriter, r *http.Request)
 }
 type implMessageHandler struct {
@@ -26,7 +26,7 @@ func NewMessageHandler(messageRepo database.MessageRepository, cache *cache.Cach
 	return &implMessageHandler{messageService: service.NewMessageService(messageRepo, cache)}
 }
 
-func (mh *implMessageHandler) CreateConversation(w http.ResponseWriter, r *http.Request) {
+func (mh *implMessageHandler) CreateChat(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -38,21 +38,21 @@ func (mh *implMessageHandler) CreateConversation(w http.ResponseWriter, r *http.
 		return
 	}
 	receiver := body["user_id"]
-	conversation := models.NewConversation(userID, receiver)
-	if err := mh.messageService.CreateConversation(r.Context(), conversation); err != nil {
+	chat := models.NewChat(userID, receiver)
+	if err := mh.messageService.CreateChat(r.Context(), chat); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	WriteResponseWithEncoder(w, conversation, http.StatusCreated)
+	WriteResponseWithEncoder(w, chat, http.StatusCreated)
 }
 
-func (mh *implMessageHandler) GetConversationsFromUser(w http.ResponseWriter, r *http.Request) {
+func (mh *implMessageHandler) GetChatsFromUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	chats, err := mh.messageService.GetConversationsFromUser(r.Context(), userID)
+	chats, err := mh.messageService.GetChatsFromUser(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -80,7 +80,13 @@ func (mh *implMessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (mh *implMessageHandler) GetMessagesFromConversation(w http.ResponseWriter, r *http.Request) {
+func (mh *implMessageHandler) GetMessagesFromChat(w http.ResponseWriter, r *http.Request) {
+	idPath := r.PathValue("chat_id")
+	chatID, err := strconv.ParseInt(idPath, 10, 64)
+	if err != nil {
+		http.Error(w, "wrong id", http.StatusBadRequest)
+		return
+	}
 
 }
 
