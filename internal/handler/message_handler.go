@@ -87,9 +87,51 @@ func (mh *implMessageHandler) GetMessagesFromChat(w http.ResponseWriter, r *http
 		http.Error(w, "wrong id", http.StatusBadRequest)
 		return
 	}
-
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	limit, err := ParseQueryInt(r, "limit", DEFAULT_LIMIT)
+	if err != nil {
+		http.Error(w, "invalid format for limit ", http.StatusBadRequest)
+		return
+	}
+	offset, err := ParseQueryInt(r, "offset", DEFAULT_OFFSET)
+	if err != nil {
+		http.Error(w, "invalid format for offset ", http.StatusBadRequest)
+		return
+	}
+	messages, err := mh.messageService.GetMessagesFromChat(r.Context(), chatID, userID, limit, offset)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	WriteResponseWithEncoder(w, messages, http.StatusOK)
 }
 
 func (mh *implMessageHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
+	idPath := r.PathValue("chat_id")
+	chatID, err := strconv.ParseInt(idPath, 10, 64)
+	if err != nil {
+		http.Error(w, "wrong id", http.StatusBadRequest)
+		return
+	}
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var messageReq service.MessageRequest
+	if err := json.NewDecoder(r.Body).Decode(&messageReq); err != nil {
+		http.Error(w, "wrong format for request", http.StatusBadRequest)
+		return
+	}
+	message := models.NewMessage(chatID, userID, messageReq.Content, messageReq.ImagePath)
+	if err := mh.messageService.CreateMessage(r.Context(), &message); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	WriteResponseWithEncoder(w, message, http.StatusCreated)
 
 }

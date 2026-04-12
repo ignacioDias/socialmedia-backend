@@ -2,15 +2,23 @@ package service
 
 import (
 	"context"
+	"errors"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
 	"socialnet/internal/models"
 )
 
 type MessageService interface {
-	CreateConversation(ctx context.Context, conversation *models.Conversation) error
-	GetConversationsFromUser(ctx context.Context, userID int64) ([]models.Conversation, error)
+	CreateChat(ctx context.Context, chat *models.Chat) error
+	GetChatsFromUser(ctx context.Context, userID int64) ([]models.Chat, error)
 	DeleteMessage(ctx context.Context, messageID, userID int64) error
+	GetMessagesFromChat(ctx context.Context, chatID, userID int64, limit, offset int) ([]models.Message, error)
+	CreateMessage(ctx context.Context, message *models.Message) error
+}
+
+type MessageRequest struct {
+	ImagePath string `json:"imagePath"`
+	Content   string `json:"content"`
 }
 
 type implMessageService struct {
@@ -25,14 +33,25 @@ func NewMessageService(messageRepo database.MessageRepository, cache *cache.Cach
 	}
 }
 
-func (s *implMessageService) CreateConversation(ctx context.Context, conversation *models.Conversation) error {
-	return s.messageRepo.CreateConversation(ctx, conversation)
+func (s *implMessageService) CreateChat(ctx context.Context, chat *models.Chat) error {
+	return s.messageRepo.CreateChat(ctx, chat)
 }
 
-func (s *implMessageService) GetConversationsFromUser(ctx context.Context, userID int64) ([]models.Conversation, error) {
-	return s.messageRepo.GetConversationsFromUserID(ctx, userID)
+func (s *implMessageService) GetChatsFromUser(ctx context.Context, userID int64) ([]models.Chat, error) {
+	return s.messageRepo.GetChatsFromUserID(ctx, userID)
 }
 
 func (s *implMessageService) DeleteMessage(ctx context.Context, messageID, userID int64) error {
 	return s.messageRepo.DeleteMessageByID(ctx, messageID, userID)
+}
+
+func (s *implMessageService) GetMessagesFromChat(ctx context.Context, chatID, userID int64, limit, offset int) ([]models.Message, error) {
+	return s.messageRepo.GetMessagesFromChat(ctx, chatID, userID, limit, offset)
+}
+
+func (s *implMessageService) CreateMessage(ctx context.Context, message *models.Message) error {
+	if message.Content == "" && message.ImagePath == "" {
+		return errors.New("empty message")
+	}
+	return s.messageRepo.CreateMessage(ctx, message)
 }
