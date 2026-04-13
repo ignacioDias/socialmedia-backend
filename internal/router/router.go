@@ -13,6 +13,7 @@ type Router struct {
 	userHandler      handler.UserHandler
 	followingHandler handler.FollowingHandler
 	messageHandler   handler.MessageHandler
+	postHandler      handler.PostHandler
 	authenticationMw *middleware.AuthenticationMiddleware
 	rateLimit        *middleware.RateLimitMiddleware
 }
@@ -22,6 +23,10 @@ func NewRouter(db *database.Database, cache *cache.Cache) *Router {
 		mux:              http.NewServeMux(),
 		authenticationMw: middleware.NewAuthenticationMiddleware(db.SessionRepo),
 		rateLimit:        middleware.NewRateLimitMiddleware(),
+		postHandler:      handler.NewPostHandler(db.PostRepo, cache),
+		userHandler:      handler.NewUserHandler(db.UserRepo, db.SessionRepo, cache),
+		messageHandler:   handler.NewMessageHandler(db.MessageRepo, cache),
+		followingHandler: handler.NewFollowingHandler(db.FollowRepo, cache),
 	}
 }
 
@@ -41,7 +46,7 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 
 	r.mux.HandleFunc("GET /api/v1/users/{user_id}", r.userHandler.GetUserByID)
 
-	r.mux.HandleFunc("POST /api/v1/upload", r.authenticationMw.AuthenticationMiddleware(r.rateLimit.RateLimit(uploadHandler)))
+	r.mux.HandleFunc("POST /api/v1/upload", r.rateLimit.RateLimit(r.authenticationMw.AuthenticationMiddleware(uploadHandler)))
 
 	//following
 	r.mux.HandleFunc("POST /api/v1/following/follow/{user_id}", r.authenticationMw.AuthenticationMiddleware(r.followingHandler.FollowUser))
@@ -59,6 +64,14 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 
 	r.mux.HandleFunc("GET /api/v1/chats/{chat_id}/messages", r.authenticationMw.AuthenticationMiddleware(r.messageHandler.GetMessagesFromChat))
 	r.mux.HandleFunc("POST /api/v1/chats/{chat_id}/messages", r.authenticationMw.AuthenticationMiddleware(r.messageHandler.CreateMessage))
+
+	//post
+	r.mux.HandleFunc("POST /api/v1/posts", r.rateLimit.RateLimit(r.authenticationMw.AuthenticationMiddleware(r.postHandler.CreatePost)))
+	r.mux.HandleFunc("GET /api/v1/posts/{post_id}", r.postHandler.GetPost)
+	r.mux.HandleFunc("DELETE /api/v1/posts/{post_id}", r.authenticationMw.AuthenticationMiddleware(r.postHandler.DeletePost))
+
+	r.mux.HandleFunc("GET /api/v1/users/{user_id}/posts", r.postHandler.GetPostsFromUser)
+	r.mux.HandleFunc("GET /api/v1/feed", r.rateLimit.RateLimit(r.authenticationMw.AuthenticationMiddleware(r.postHandler.GetPostsFromFollowing)))
 
 	return r.mux
 }

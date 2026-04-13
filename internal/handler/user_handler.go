@@ -10,17 +10,27 @@ import (
 	"strconv"
 )
 
-type UserHandler struct {
+type UserHandler interface {
+	RegisterUser(w http.ResponseWriter, r *http.Request)
+	LogoutUser(w http.ResponseWriter, r *http.Request)
+	LoginUser(w http.ResponseWriter, r *http.Request)
+	GetCurrentUser(w http.ResponseWriter, r *http.Request)
+	GetUserByID(w http.ResponseWriter, r *http.Request)
+	UpdateUserInfo(w http.ResponseWriter, r *http.Request)
+	DeleteCurrentUser(w http.ResponseWriter, r *http.Request)
+	UpdateUserPassword(w http.ResponseWriter, r *http.Request)
+}
+type implUserHandler struct {
 	userService service.UserService
 }
 
-func NewUserHandler(userRepo database.UserRepository, sessionRepo database.SessionRepository, cache *cache.Cache) *UserHandler {
-	return &UserHandler{
+func NewUserHandler(userRepo database.UserRepository, sessionRepo database.SessionRepository, cache *cache.Cache) UserHandler {
+	return &implUserHandler{
 		userService: service.NewUserService(userRepo, sessionRepo, cache),
 	}
 }
 
-func (uh *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
+func (uh *implUserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	var userRequest service.UserRegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
 		http.Error(w, "Invalid user data", http.StatusBadRequest)
@@ -35,7 +45,7 @@ func (uh *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (uh *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
+func (uh *implUserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	var loginReq service.UserLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
 		http.Error(w, "wrong input for login request", http.StatusBadRequest)
@@ -58,7 +68,7 @@ func (uh *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	})
 	w.WriteHeader(http.StatusOK)
 }
-func (uh *UserHandler) LogoutUser(w http.ResponseWriter, r *http.Request) {
+func (uh *implUserHandler) LogoutUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -80,7 +90,7 @@ func (uh *UserHandler) LogoutUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (uh *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+func (uh *implUserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
 		http.Error(w, "unauthorized access", http.StatusUnauthorized)
@@ -94,7 +104,7 @@ func (uh *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	WriteResponseWithEncoder(w, user, http.StatusOK)
 }
 
-func (uh *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+func (uh *implUserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("user_id")
 	idValue, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
@@ -109,7 +119,7 @@ func (uh *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	WriteResponseWithEncoder(w, user, http.StatusOK)
 }
 
-func (uh *UserHandler) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
+func (uh *implUserHandler) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
 		http.Error(w, "unauthorized access", http.StatusUnauthorized)
@@ -128,7 +138,7 @@ func (uh *UserHandler) UpdateUserInfo(w http.ResponseWriter, r *http.Request) {
 	WriteResponseWithEncoder(w, user, http.StatusOK)
 }
 
-func (uh *UserHandler) UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
+func (uh *implUserHandler) UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
 		http.Error(w, "unauthorized access", http.StatusUnauthorized)
@@ -146,7 +156,7 @@ func (uh *UserHandler) UpdateUserPassword(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (uh *UserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) {
+func (uh *implUserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r)
 	if !ok {
 		http.Error(w, "unauthorized access", http.StatusUnauthorized)

@@ -15,7 +15,8 @@ type PostRepository interface {
 	CreatePost(ctx context.Context, post *models.Post) error
 	GetPostByID(ctx context.Context, id int64) (*models.Post, error)
 	GetPostsByUserID(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error)
-	DeletePostByID(ctx context.Context, postID int64) error
+	GetPostsFromFollows(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error)
+	DeletePostByID(ctx context.Context, postID, userID int64) error
 }
 
 type postRepository struct {
@@ -52,8 +53,17 @@ func (pr *postRepository) GetPostsByUserID(ctx context.Context, userID int64, li
 	return posts, nil
 }
 
-func (pr *postRepository) DeletePostByID(ctx context.Context, postID int64) error {
-	query := `DELETE FROM posts WHERE post_id = $1`
-	result, err := pr.db.ExecContext(ctx, query, postID)
+func (pr *postRepository) GetPostsFromFollows(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
+	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at, p.image_path FROM posts p INNER JOIN follows f ON f.following_id = p.user_id WHERE f.follower_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	var posts []models.Post
+	if err := pr.db.SelectContext(ctx, &posts, query, userID, limit, offset); err != nil {
+		return nil, err
+	}
+	return posts, nil
+}
+
+func (pr *postRepository) DeletePostByID(ctx context.Context, postID, userID int64) error {
+	query := `DELETE FROM posts WHERE post_id = $1 AND user_id = $2`
+	result, err := pr.db.ExecContext(ctx, query, postID, userID)
 	return CheckErrResult(result, err, ErrPostNotFound)
 }
