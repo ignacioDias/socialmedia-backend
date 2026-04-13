@@ -164,6 +164,7 @@ func (uh *implUserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Requ
 	}
 	if err := uh.userService.DeleteUserByID(r.Context(), userID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

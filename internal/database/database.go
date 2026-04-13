@@ -18,6 +18,14 @@ type Database struct {
 	UserRepo    UserRepository
 }
 
+var createSessionsTable = `
+CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL
+);`
+
 var createUsersTable = `
 CREATE TABLE IF NOT EXISTS users (
 	user_id BIGSERIAL PRIMARY KEY,
@@ -122,6 +130,7 @@ func (db *Database) Init() error {
 		ddl  string
 	}{
 		{name: "users", ddl: createUsersTable},
+		{name: "sessions", ddl: createSessionsTable},
 		{name: "posts", ddl: createPostsTable},
 		{name: "likes", ddl: createLikesTable},
 		{name: "reposts", ddl: createRepostsTable},

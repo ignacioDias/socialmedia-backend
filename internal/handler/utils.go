@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 
 const DEFAULT_LIMIT = 20
 const DEFAULT_OFFSET = 0
+const MAX_LIMIT = 100
 
 func WriteResponseWithEncoder(w http.ResponseWriter, value any, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
@@ -22,5 +24,17 @@ func ParseQueryInt(r *http.Request, key string, defaultValue int) (int, error) {
 	if val == "" {
 		return defaultValue, nil
 	}
-	return strconv.Atoi(val)
+
+	parsed, err := strconv.Atoi(val)
+	if err != nil {
+		return 0, err
+	}
+	if parsed < 0 {
+		return 0, fmt.Errorf("%s must be >= 0", key)
+	}
+	if key == "limit" && parsed > MAX_LIMIT {
+		return 0, fmt.Errorf("%s must be <= %d", key, MAX_LIMIT)
+	}
+
+	return parsed, nil
 }

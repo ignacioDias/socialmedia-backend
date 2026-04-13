@@ -34,6 +34,9 @@ func NewMessageService(messageRepo database.MessageRepository, cache *cache.Cach
 }
 
 func (s *implMessageService) CreateChat(ctx context.Context, chat *models.Chat) error {
+	if chat.User1ID == chat.User2ID {
+		return errors.New("can't make a chat with yourself")
+	}
 	return s.messageRepo.CreateChat(ctx, chat)
 }
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
 	"socialnet/internal/models"
@@ -29,6 +30,9 @@ func NewFollowingService(followingRepo database.FollowRepository, cache *cache.C
 }
 
 func (s *implFollowingService) CreateFollow(ctx context.Context, follow *models.Follow) error {
+	if follow.FollowerID == follow.FollowingID {
+		return errors.New("can't follow yourself")
+	}
 	return s.followingRepo.CreateFollow(ctx, follow)
 }
 
