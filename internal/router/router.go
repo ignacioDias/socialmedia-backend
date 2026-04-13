@@ -14,6 +14,7 @@ type Router struct {
 	followingHandler handler.FollowingHandler
 	messageHandler   handler.MessageHandler
 	postHandler      handler.PostHandler
+	commentHandler   handler.CommentHandler
 	authenticationMw *middleware.AuthenticationMiddleware
 	rateLimit        *middleware.RateLimitMiddleware
 }
@@ -23,6 +24,7 @@ func NewRouter(db *database.Database, cache *cache.Cache) *Router {
 		mux:              http.NewServeMux(),
 		authenticationMw: middleware.NewAuthenticationMiddleware(db.SessionRepo),
 		rateLimit:        middleware.NewRateLimitMiddleware(),
+		commentHandler:   handler.NewCommentHandler(db.CommentRepo, cache),
 		postHandler:      handler.NewPostHandler(db.PostRepo, cache),
 		userHandler:      handler.NewUserHandler(db.UserRepo, db.SessionRepo, cache),
 		messageHandler:   handler.NewMessageHandler(db.MessageRepo, cache),
@@ -72,6 +74,21 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 
 	r.mux.HandleFunc("GET /api/v1/users/{user_id}/posts", r.postHandler.GetPostsFromUser)
 	r.mux.HandleFunc("GET /api/v1/feed", r.rateLimit.RateLimit(r.authenticationMw.AuthenticationMiddleware(r.postHandler.GetPostsFromFollowing)))
+
+	//comments
+	r.mux.HandleFunc("POST /api/v1/posts/{post_id}/comments", r.authenticationMw.AuthenticationMiddleware(r.commentHandler.CreateCommentForPost))
+	r.mux.HandleFunc("POST /api/v1/comments/{comment_id}/comments", r.authenticationMw.AuthenticationMiddleware(r.commentHandler.CreateCommentForComment))
+	r.mux.HandleFunc("GET /api/v1/comments/{comment_id}", r.commentHandler.GetComment)
+	r.mux.HandleFunc("GET /api/v1/posts/{post_id}/comments", r.commentHandler.GetCommentsFromPost)
+	r.mux.HandleFunc("GET /api/v1/comments/{comment_id}/comments", r.commentHandler.GetCommentsFromComment)
+	r.mux.HandleFunc("DELETE /api/v1/comments/{comment_id}", r.authenticationMw.AuthenticationMiddleware(r.commentHandler.DeleteComment))
+	r.mux.HandleFunc("GET /api/v1/users/me/comments", r.authenticationMw.AuthenticationMiddleware(r.commentHandler.GetCommentsFromUser))
+
+	//bookmark
+
+	//like
+
+	//repost
 
 	return r.mux
 }

@@ -16,7 +16,7 @@ type CommentRepository interface {
 	GetCommentByID(ctx context.Context, commentID int64) (*models.Comment, error)
 	GetCommentsFromTarget(ctx context.Context, targetType models.TargetType, targetID int64, limit, offset int) ([]models.Comment, error)
 	GetCommentsFromUser(ctx context.Context, userID int64, limit, offset int) ([]models.Comment, error)
-	DeleteCommentByID(ctx context.Context, commentID int) error
+	DeleteCommentByID(ctx context.Context, commentID, userID int64) error
 }
 type commentRepository struct {
 	db *sqlx.DB
@@ -63,8 +63,8 @@ func (cr *commentRepository) GetCommentsFromUser(ctx context.Context, userID int
 	return comments, nil
 }
 
-func (cr *commentRepository) DeleteCommentByID(ctx context.Context, commentID int) error {
-	query := `DELETE FROM comments WHERE comment_id = $1 OR (target_id = $1 AND target_type = $2)`
-	result, err := cr.db.ExecContext(ctx, query, commentID, models.CommentTarget)
+func (cr *commentRepository) DeleteCommentByID(ctx context.Context, commentID, userID int64) error {
+	query := `DELETE FROM comments WHERE (user_id = $1 AND comment_id = $2)`
+	result, err := cr.db.ExecContext(ctx, query, userID, commentID)
 	return CheckErrResult(result, err, ErrCommentNotFound)
 }
