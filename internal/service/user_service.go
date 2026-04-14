@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
 	"socialnet/internal/models"
+	"time"
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
@@ -105,7 +107,18 @@ func (s *userServiceImpl) Logout(ctx context.Context, userID int64) error {
 }
 
 func (s *userServiceImpl) GetUserByID(ctx context.Context, userID int64) (*models.User, error) {
-	return s.userRepo.GetUserByID(ctx, userID)
+	var user *models.User
+	key := fmt.Sprintf("user:%d", userID)
+	if err := s.cache.Get(key, &user); err == nil {
+		return user, nil
+	}
+
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	_ = s.cache.Set(key, user, 2*time.Hour)
+	return user, nil
 }
 
 func (s *userServiceImpl) UpdatePassword(ctx context.Context, userID int64, updatePassReq *UpdatePasswordReq) error {
@@ -121,7 +134,13 @@ func (s *userServiceImpl) UpdatePassword(ctx context.Context, userID int64, upda
 	if err != nil {
 		return err
 	}
-	return s.userRepo.UpdateUserHashedPassword(ctx, string(hashedPassword), userID)
+
+	if err := s.userRepo.UpdateUserHashedPassword(ctx, string(hashedPassword), userID); err != nil {
+		return err
+	}
+	key := fmt.Sprintf("user:%d", userID)
+	_ = s.cache.Delete(key)
+	return nil
 }
 
 func (s *userServiceImpl) UpdateInfo(ctx context.Context, userID int64, updateInfoReq *UpdateInfoReq) (*models.User, error) {
@@ -131,7 +150,7 @@ func (s *userServiceImpl) UpdateInfo(ctx context.Context, userID int64, updateIn
 	if updateInfoReq.Username != nil && *updateInfoReq.Username == "" {
 		return nil, ErrInvalidUsername
 	}
-	user, err := s.userRepo.GetUserByID(ctx, userID)
+	user, err := s.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -141,15 +160,26 @@ func (s *userServiceImpl) UpdateInfo(ctx context.Context, userID int64, updateIn
 	if updateInfoReq.Username != nil {
 		user.Username = *updateInfoReq.Username
 	}
-	return s.userRepo.UpdateUserInfo(ctx, user)
+	updatedUser, err := s.userRepo.UpdateUserInfo(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	key := fmt.Sprintf("user:%d", userID)
+	_ = s.cache.Delete(key)
+	return updatedUser, nil
 }
 
 func (s *userServiceImpl) DeleteUserByID(ctx context.Context, userID int64) error {
-	return s.userRepo.DeleteUserByID(ctx, userID)
+	if err := s.userRepo.DeleteUserByID(ctx, userID); err != nil {
+		return err
+	}
+	key := fmt.Sprintf("user:%d", userID)
+	_ = s.cache.Delete(key)
+	return nil
 }
 
 func (s *userServiceImpl) isPasswordCorrect(ctx context.Context, userID int64, oldPassword string) (bool, error) {
-	user, err := s.GetUserByID(ctx, userID)
+	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		return false, err
 	}
