@@ -7,15 +7,16 @@ import (
 )
 
 type Database struct {
-	db          *sqlx.DB
-	PostRepo    PostRepository
-	FollowRepo  FollowRepository
-	RepostRepo  RepostRepository
-	SessionRepo SessionRepository
-	CommentRepo CommentRepository
-	LikeRepo    LikeRepository
-	MessageRepo MessageRepository
-	UserRepo    UserRepository
+	db           *sqlx.DB
+	PostRepo     PostRepository
+	FollowRepo   FollowRepository
+	RepostRepo   RepostRepository
+	SessionRepo  SessionRepository
+	CommentRepo  CommentRepository
+	LikeRepo     LikeRepository
+	BookmarkRepo BookmarkRepository
+	MessageRepo  MessageRepository
+	UserRepo     UserRepository
 }
 
 var createSessionsTable = `
@@ -81,6 +82,13 @@ CREATE TABLE IF NOT EXISTS reposts(
 	created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (post_id, user_id)
 )`
+var createBookmarksTable = `
+CREATE TABLE IF NOT EXISTS bookmarks(
+	post_id BIGINT NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
+	user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+	created_at TIMESTAMPTZ DEFAULT NOW(),
+	PRIMARY KEY (user_id, post_id)
+);`
 
 var createChatsTable = `
 CREATE TABLE IF NOT EXISTS chats(
@@ -103,15 +111,16 @@ CREATE TABLE IF NOT EXISTS messages(
 
 func NewDatabase(db *sqlx.DB) *Database {
 	return &Database{
-		db:          db,
-		PostRepo:    NewPostRepository(db),
-		LikeRepo:    NewLikeRepository(db),
-		SessionRepo: NewSessionRepository(db),
-		RepostRepo:  NewRepostRepository(db),
-		CommentRepo: NewCommentRepository(db),
-		FollowRepo:  NewFollowRepository(db),
-		MessageRepo: NewMessageRepository(db),
-		UserRepo:    NewUserRepository(db),
+		db:           db,
+		PostRepo:     NewPostRepository(db),
+		LikeRepo:     NewLikeRepository(db),
+		SessionRepo:  NewSessionRepository(db),
+		BookmarkRepo: NewBookmarkRepository(db),
+		RepostRepo:   NewRepostRepository(db),
+		CommentRepo:  NewCommentRepository(db),
+		FollowRepo:   NewFollowRepository(db),
+		MessageRepo:  NewMessageRepository(db),
+		UserRepo:     NewUserRepository(db),
 	}
 }
 
@@ -133,6 +142,7 @@ func (db *Database) Init() error {
 		{name: "sessions", ddl: createSessionsTable},
 		{name: "posts", ddl: createPostsTable},
 		{name: "likes", ddl: createLikesTable},
+		{name: "bookmarks", ddl: createBookmarksTable},
 		{name: "reposts", ddl: createRepostsTable},
 		{name: "comments", ddl: createCommentsTable},
 		{name: "chats", ddl: createChatsTable},

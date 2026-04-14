@@ -15,6 +15,7 @@ type Router struct {
 	messageHandler   handler.MessageHandler
 	postHandler      handler.PostHandler
 	commentHandler   handler.CommentHandler
+	bookmarkHandler  handler.BookmarkHandler
 	authenticationMw *middleware.AuthenticationMiddleware
 	rateLimit        *middleware.RateLimitMiddleware
 }
@@ -26,6 +27,7 @@ func NewRouter(db *database.Database, cache *cache.Cache) *Router {
 		rateLimit:        middleware.NewRateLimitMiddleware(),
 		commentHandler:   handler.NewCommentHandler(db.CommentRepo, cache),
 		postHandler:      handler.NewPostHandler(db.PostRepo, cache),
+		bookmarkHandler:  handler.NewBookmarkHandler(db.BookmarkRepo, cache),
 		userHandler:      handler.NewUserHandler(db.UserRepo, db.SessionRepo, cache),
 		messageHandler:   handler.NewMessageHandler(db.MessageRepo, cache),
 		followingHandler: handler.NewFollowingHandler(db.FollowRepo, cache),
@@ -85,7 +87,11 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 	r.mux.HandleFunc("GET /api/v1/users/me/comments", r.authenticationMw.AuthenticationMiddleware(r.commentHandler.GetCommentsFromUser))
 
 	//bookmark
-
+	r.mux.HandleFunc("POST /api/v1/posts/{post_id}/bookmark", r.authenticationMw.AuthenticationMiddleware(r.bookmarkHandler.CreateBookmark))
+	r.mux.HandleFunc("DELETE /api/v1/posts/{post_id}/bookmark", r.authenticationMw.AuthenticationMiddleware(r.bookmarkHandler.DeleteBookmark))
+	r.mux.HandleFunc("GET /api/v1/users/me/bookmarks", r.authenticationMw.AuthenticationMiddleware(r.bookmarkHandler.GetPostsFromUsersBookmark))
+	// CreateBookmark(ctx context.Context, bookmark *models.Bookmark) error
+	// DeleteBookmarkByID(ctx context.Context, bookmark *models.Bookmark) error
 	//like
 
 	//repost

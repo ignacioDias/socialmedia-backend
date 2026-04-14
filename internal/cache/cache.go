@@ -2,7 +2,9 @@ package cache
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -23,6 +25,14 @@ func NewCache(addr string) *Cache {
 		client: redis,
 		ctx:    context.Background(),
 	}
+}
+
+func CacheKey(parts ...string) string {
+	h := sha256.New()
+	for _, p := range parts {
+		h.Write([]byte(p))
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func (c *Cache) Get(key string, dest any) error {
