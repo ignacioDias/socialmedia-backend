@@ -14,11 +14,15 @@ type UserHandler interface {
 	RegisterUser(w http.ResponseWriter, r *http.Request)
 	LogoutUser(w http.ResponseWriter, r *http.Request)
 	LoginUser(w http.ResponseWriter, r *http.Request)
+
+	DeleteCurrentUser(w http.ResponseWriter, r *http.Request)
+
 	GetCurrentUser(w http.ResponseWriter, r *http.Request)
 	GetUserByID(w http.ResponseWriter, r *http.Request)
 	UpdateUserInfo(w http.ResponseWriter, r *http.Request)
-	DeleteCurrentUser(w http.ResponseWriter, r *http.Request)
 	UpdateUserPassword(w http.ResponseWriter, r *http.Request)
+	UpdateUserBanner(w http.ResponseWriter, r *http.Request)
+	UpdateProfilePicture(w http.ResponseWriter, r *http.Request)
 }
 type implUserHandler struct {
 	userService service.UserService
@@ -150,6 +154,42 @@ func (uh *implUserHandler) UpdateUserPassword(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if err := uh.userService.UpdatePassword(r.Context(), userID, &updatePassReq); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (uh *implUserHandler) UpdateUserBanner(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		http.Error(w, "unauthorized access", http.StatusUnauthorized)
+		return
+	}
+	var updateBannerReq service.UpdateUserBannerReq
+	if err := json.NewDecoder(r.Body).Decode(&updateBannerReq); err != nil {
+		http.Error(w, "invalid format request", http.StatusBadRequest)
+		return
+	}
+	if err := uh.userService.UpdateBanner(r.Context(), userID, &updateBannerReq); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (uh *implUserHandler) UpdateProfilePicture(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r)
+	if !ok {
+		http.Error(w, "unauthorized access", http.StatusUnauthorized)
+		return
+	}
+	var updateProfilePictureReq service.UpdateProfilePictureReq
+	if err := json.NewDecoder(r.Body).Decode(&updateProfilePictureReq); err != nil {
+		http.Error(w, "invalid format request", http.StatusBadRequest)
+		return
+	}
+	if err := uh.userService.UpdateProfilePicture(r.Context(), userID, &updateProfilePictureReq); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

@@ -30,6 +30,14 @@ type UpdateInfoReq struct {
 	Username *string `json:"username"`
 	Email    *string `json:"email"`
 }
+
+type UpdateProfilePictureReq struct {
+	ProfilePicture string `json:"profilePicture"`
+}
+
+type UpdateUserBannerReq struct {
+	Banner string `json:"banner"`
+}
 type UpdatePasswordReq struct {
 	OldPassword string `json:"oldPassword"`
 	NewPassword string `json:"newPassword"`
@@ -43,6 +51,8 @@ type UserService interface {
 	DeleteUserByID(ctx context.Context, userID int64) error
 	UpdatePassword(ctx context.Context, userID int64, updatePassReq *UpdatePasswordReq) error
 	UpdateInfo(ctx context.Context, userID int64, updateInfoReq *UpdateInfoReq) (*models.User, error)
+	UpdateProfilePicture(ctx context.Context, userID int64, updateProfilePictureReq *UpdateProfilePictureReq) error
+	UpdateBanner(ctx context.Context, userID int64, updateBannerReq *UpdateUserBannerReq) error
 }
 
 type userServiceImpl struct {
@@ -164,6 +174,24 @@ func (s *userServiceImpl) UpdateInfo(ctx context.Context, userID int64, updateIn
 	key := fmt.Sprintf("user:%d", userID)
 	_ = s.cache.Delete(key)
 	return updatedUser, nil
+}
+
+func (s *userServiceImpl) UpdateProfilePicture(ctx context.Context, userID int64, updateProfilePictureReq *UpdateProfilePictureReq) error {
+	if err := s.userRepo.UpdateUserProfilePicture(ctx, updateProfilePictureReq.ProfilePicture, userID); err != nil {
+		return err
+	}
+	key := fmt.Sprintf("user:%d", userID)
+	_ = s.cache.Delete(key)
+	return nil
+}
+
+func (s *userServiceImpl) UpdateBanner(ctx context.Context, userID int64, updateBannerReq *UpdateUserBannerReq) error {
+	if err := s.userRepo.UpdateUserBanner(ctx, updateBannerReq.Banner, userID); err != nil {
+		return err
+	}
+	key := fmt.Sprintf("user:%d", userID)
+	_ = s.cache.Delete(key)
+	return nil
 }
 
 func (s *userServiceImpl) DeleteUserByID(ctx context.Context, userID int64) error {
