@@ -33,7 +33,7 @@ func (br *bookmarkRepository) CreateBookmark(ctx context.Context, bookmark *mode
 }
 
 func (br *bookmarkRepository) GetPostsFromUsersBookmark(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
-	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at 
+	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.image_path, p.created_at 
           FROM posts p 
           INNER JOIN bookmarks b ON p.post_id = b.post_id 
           WHERE b.user_id = $1

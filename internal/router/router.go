@@ -30,6 +30,7 @@ func NewRouter(db *database.Database, cache *cache.Cache) *Router {
 		postHandler:      handler.NewPostHandler(db.PostRepo, cache),
 		bookmarkHandler:  handler.NewBookmarkHandler(db.BookmarkRepo, cache),
 		userHandler:      handler.NewUserHandler(db.UserRepo, db.SessionRepo, cache),
+		likeHandler:      handler.NewLikeHandler(db.LikeRepo, cache),
 		messageHandler:   handler.NewMessageHandler(db.MessageRepo, cache),
 		followingHandler: handler.NewFollowingHandler(db.FollowRepo, cache),
 	}

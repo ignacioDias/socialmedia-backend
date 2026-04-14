@@ -34,7 +34,7 @@ func (lr *likeRepository) CreateLike(ctx context.Context, like *models.Like) err
 }
 
 func (lr *likeRepository) GetPostsFromUsersLikes(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
-	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.created_at FROM likes l INNER JOIN posts p ON l.target_id = p.post_id WHERE l.user_id = $1 AND l.target_type = $2 ORDER BY l.created_at DESC LIMIT $3 OFFSET $4`
+	query := `SELECT p.post_id, p.user_id, p.title, p.content, p.image_path, p.created_at FROM likes l INNER JOIN posts p ON l.target_id = p.post_id WHERE l.user_id = $1 AND l.target_type = $2 ORDER BY l.created_at DESC LIMIT $3 OFFSET $4`
 	var posts []models.Post
 	if err := lr.db.SelectContext(ctx, &posts, query, userID, models.PostTarget, limit, offset); err != nil {
 		return nil, err
