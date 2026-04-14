@@ -16,6 +16,7 @@ type Router struct {
 	postHandler      handler.PostHandler
 	commentHandler   handler.CommentHandler
 	bookmarkHandler  handler.BookmarkHandler
+	likeHandler      handler.LikeHandler
 	authenticationMw *middleware.AuthenticationMiddleware
 	rateLimit        *middleware.RateLimitMiddleware
 }
@@ -90,11 +91,17 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 	r.mux.HandleFunc("POST /api/v1/posts/{post_id}/bookmark", r.authenticationMw.AuthenticationMiddleware(r.bookmarkHandler.CreateBookmark))
 	r.mux.HandleFunc("DELETE /api/v1/posts/{post_id}/bookmark", r.authenticationMw.AuthenticationMiddleware(r.bookmarkHandler.DeleteBookmark))
 	r.mux.HandleFunc("GET /api/v1/users/me/bookmarks", r.authenticationMw.AuthenticationMiddleware(r.bookmarkHandler.GetPostsFromUsersBookmark))
-	// CreateBookmark(ctx context.Context, bookmark *models.Bookmark) error
-	// DeleteBookmarkByID(ctx context.Context, bookmark *models.Bookmark) error
-	//like
 
-	//repost
+	//like
+	r.mux.HandleFunc("POST /api/v1/posts/{post_id}/like", r.authenticationMw.AuthenticationMiddleware(r.likeHandler.CreateLikeForPost))
+	r.mux.HandleFunc("POST /api/v1/comments/{comment_id}/like", r.authenticationMw.AuthenticationMiddleware(r.likeHandler.CreateLikeForComment))
+
+	r.mux.HandleFunc("DELETE /api/v1/posts/{post_id}/like", r.authenticationMw.AuthenticationMiddleware(r.likeHandler.DeleteLikeForPost))
+	r.mux.HandleFunc("DELETE /api/v1/comments/{comment_id}/like", r.authenticationMw.AuthenticationMiddleware(r.likeHandler.DeleteLikeForComment))
+
+	r.mux.HandleFunc("GET /api/v1/users/me/likes", r.authenticationMw.AuthenticationMiddleware(r.likeHandler.GetPostsFromUsersLikes))
+	r.mux.HandleFunc("GET /api/v1/posts/{post_id}/likes/count", r.likeHandler.GetLikesCountFromPost)
+	r.mux.HandleFunc("GET /api/v1/comments/{comment_id}/likes/count", r.likeHandler.GetLikesCountFromComment)
 
 	return r.mux
 }
