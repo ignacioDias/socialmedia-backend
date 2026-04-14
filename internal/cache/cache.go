@@ -27,7 +27,7 @@ func NewCache(addr string) *Cache {
 	}
 }
 
-func CacheKey(parts ...string) string {
+func GenerateCacheKey(parts ...string) string {
 	h := sha256.New()
 	for _, p := range parts {
 		h.Write([]byte(p))
