@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
 	"socialnet/internal/models"
+	"time"
 )
 
 type PostRequest struct {
@@ -42,13 +44,28 @@ func (s *implPostService) GetPostFromID(ctx context.Context, postID int64) (*mod
 	if postID <= 0 {
 		return nil, errors.New("invalid ID")
 	}
-	return s.postRepo.GetPostByID(ctx, postID)
+	key := fmt.Sprintf("post:%d", postID)
+	var post *models.Post
+	if err := s.cache.Get(key, &post); err == nil {
+		return post, nil
+	}
+	post, err := s.postRepo.GetPostByID(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	_ = s.cache.Set(key, post, time.Hour)
+	return post, nil
 }
 func (s *implPostService) DeletePost(ctx context.Context, postID, userID int64) error {
 	if userID <= 0 || postID <= 0 {
 		return errors.New("invalid ID")
 	}
-	return s.postRepo.DeletePostByID(ctx, postID, userID)
+	if err := s.postRepo.DeletePostByID(ctx, postID, userID); err != nil {
+		return err
+	}
+	key := fmt.Sprintf("post:%d", postID)
+	_ = s.cache.Delete(key)
+	return nil
 }
 
 func (s *implPostService) GetPostsFromUser(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {

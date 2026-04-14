@@ -94,9 +94,6 @@ func (s *userServiceImpl) Login(ctx context.Context, loginReq *UserLoginRequest)
 	}
 	session := models.NewSession(user.UserID)
 	if err := s.sessionRepo.CreateSession(ctx, session); err != nil {
-		if errors.Is(err, database.ErrUserNotFound) {
-			return nil, errors.New("invalid credentials")
-		}
 		return nil, err
 	}
 	return session, nil
