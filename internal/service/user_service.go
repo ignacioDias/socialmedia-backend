@@ -66,6 +66,8 @@ const DEFAULT_BANNER = ""
 
 var ErrInvalidEmail = errors.New("invalid email format")
 var ErrInvalidUsername = errors.New("invalid username format")
+var ErrInvalidPassword = errors.New("password must be 8-32 characters long and include uppercase, lowercase, digit, and special character")
+var ErrIncorrectPassword = errors.New("incorrect password")
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
@@ -79,13 +81,13 @@ func NewUserService(userRepo database.UserRepository, sessionRepo database.Sessi
 
 func (s *userServiceImpl) CreateUser(ctx context.Context, userReq *UserRegisterRequest) (*models.User, error) {
 	if !isValidEmail(userReq.Email) {
-		return nil, errors.New("invalid email format")
+		return nil, ErrInvalidEmail
 	}
 	if !isValidPassword(userReq.Password) {
-		return nil, errors.New("invalid password: must be 8/32 characters long and include at least one number, one special character, one uppercase letter, and one lowercase letter")
+		return nil, ErrInvalidPassword
 	}
 	if userReq.Username == "" {
-		return nil, errors.New("invalid username")
+		return nil, ErrInvalidUsername
 	}
 	password, err := hashPassword(userReq.Password)
 	if err != nil {
@@ -100,7 +102,7 @@ func (s *userServiceImpl) Login(ctx context.Context, loginReq *UserLoginRequest)
 		return nil, err
 	}
 	if !comparePasswords(user.HashedPassword, loginReq.Password) {
-		return nil, errors.New("invalid credentials")
+		return nil, ErrIncorrectPassword
 	}
 	session := models.NewSession(user.UserID)
 	if err := s.sessionRepo.CreateSession(ctx, session); err != nil {
@@ -110,6 +112,9 @@ func (s *userServiceImpl) Login(ctx context.Context, loginReq *UserLoginRequest)
 }
 
 func (s *userServiceImpl) Logout(ctx context.Context, userID int64) error {
+	if userID <= 0 {
+		return ErrInvalidID
+	}
 	return s.sessionRepo.DeleteSessionsByUserID(ctx, userID)
 }
 
@@ -130,12 +135,12 @@ func (s *userServiceImpl) GetUserByID(ctx context.Context, userID int64) (*model
 
 func (s *userServiceImpl) UpdatePassword(ctx context.Context, userID int64, updatePassReq *UpdatePasswordReq) error {
 	if !isValidPassword(updatePassReq.NewPassword) {
-		return errors.New("invalid password: must be 8/32 characters long and include at least one number, one special character, one uppercase letter, and one lowercase letter")
+		return ErrInvalidPassword
 	}
 	if ok, err := s.isPasswordCorrect(ctx, userID, updatePassReq.OldPassword); err != nil {
 		return err
 	} else if !ok {
-		return errors.New("invalid password")
+		return ErrIncorrectPassword
 	}
 	hashedPassword, err := hashPassword(updatePassReq.NewPassword)
 	if err != nil {
@@ -195,6 +200,9 @@ func (s *userServiceImpl) UpdateBanner(ctx context.Context, userID int64, update
 }
 
 func (s *userServiceImpl) DeleteUserByID(ctx context.Context, userID int64) error {
+	if userID <= 0 {
+		return ErrInvalidID
+	}
 	if err := s.userRepo.DeleteUserByID(ctx, userID); err != nil {
 		return err
 	}
@@ -204,6 +212,9 @@ func (s *userServiceImpl) DeleteUserByID(ctx context.Context, userID int64) erro
 }
 
 func (s *userServiceImpl) isPasswordCorrect(ctx context.Context, userID int64, oldPassword string) (bool, error) {
+	if userID <= 0 {
+		return false, ErrInvalidID
+	}
 	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		return false, err

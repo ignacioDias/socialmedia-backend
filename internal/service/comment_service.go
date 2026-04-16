@@ -28,6 +28,8 @@ type CommentReq struct {
 	ImagePath string `json:"imagePath"`
 }
 
+var ErrInvalidID = errors.New("invalid ID")
+
 func NewCommentService(commentRepo database.CommentRepository, cache *cache.Cache) CommentService {
 	return &implCommentService{
 		commentRepo: commentRepo,
@@ -41,7 +43,7 @@ func (s *implCommentService) CreateComment(ctx context.Context, comment *models.
 
 func (s *implCommentService) GetCommentByID(ctx context.Context, commentID int64) (*models.Comment, error) {
 	if commentID <= 0 {
-		return nil, errors.New("invalid ID")
+		return nil, ErrInvalidID
 	}
 	key := fmt.Sprintf("comment:%d", commentID)
 	var comment *models.Comment
@@ -57,12 +59,15 @@ func (s *implCommentService) GetCommentByID(ctx context.Context, commentID int64
 }
 
 func (s *implCommentService) GetCommentsFromTarget(ctx context.Context, targetID int64, targetType models.TargetType, limit, offset int) ([]models.Comment, error) {
+	if targetID <= 0 {
+		return nil, ErrInvalidID
+	}
 	return s.commentRepo.GetCommentsFromTarget(ctx, targetType, targetID, limit, offset)
 }
 
 func (s *implCommentService) DeleteCommentByID(ctx context.Context, commentID, userID int64) error {
 	if userID <= 0 || commentID <= 0 {
-		return errors.New("invalid ID")
+		return ErrInvalidID
 	}
 
 	if err := s.commentRepo.DeleteCommentByID(ctx, commentID, userID); err != nil {
@@ -74,5 +79,8 @@ func (s *implCommentService) DeleteCommentByID(ctx context.Context, commentID, u
 }
 
 func (s *implCommentService) GetCommentsFromUser(ctx context.Context, userID int64, limit, offset int) ([]models.Comment, error) {
+	if userID <= 0 {
+		return nil, ErrInvalidID
+	}
 	return s.commentRepo.GetCommentsFromUser(ctx, userID, limit, offset)
 }

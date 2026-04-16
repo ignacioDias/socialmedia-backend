@@ -24,6 +24,8 @@ type implLikeService struct {
 	cache    *cache.Cache
 }
 
+var ErrInvalidLike = errors.New("invalid like")
+
 func NewLikeService(likeRepo database.LikeRepository, cache *cache.Cache) LikeService {
 	return &implLikeService{
 		likeRepo: likeRepo,
@@ -34,7 +36,7 @@ func NewLikeService(likeRepo database.LikeRepository, cache *cache.Cache) LikeSe
 func (s *implLikeService) CreateLike(ctx context.Context, like *models.Like) error {
 	key := fmt.Sprintf(likesCountCacheKeyFormat, like.TargetType, like.TargetID)
 	if err := s.likeRepo.CreateLike(ctx, like); err != nil {
-		return fmt.Errorf("failed to create like: %w", err)
+		return err
 	}
 	_ = s.cache.Delete(key)
 	return nil
@@ -42,14 +44,14 @@ func (s *implLikeService) CreateLike(ctx context.Context, like *models.Like) err
 
 func (s *implLikeService) GetPostsFromUsersLikes(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
 	if userID <= 0 {
-		return nil, errors.New("invalid user ID")
+		return nil, ErrInvalidID
 	}
 	return s.likeRepo.GetPostsFromUsersLikes(ctx, userID, limit, offset)
 }
 
 func (s *implLikeService) GetLikesCountFromTarget(ctx context.Context, targetID int64, targetType models.TargetType) (int64, error) {
 	if targetID <= 0 {
-		return 0, errors.New("invalid target ID")
+		return 0, ErrInvalidID
 	}
 	key := fmt.Sprintf(likesCountCacheKeyFormat, targetType, targetID)
 	var likeCount int64
@@ -58,7 +60,7 @@ func (s *implLikeService) GetLikesCountFromTarget(ctx context.Context, targetID 
 	}
 	likeCount, err := s.likeRepo.GetLikesCountFromTarget(ctx, targetID, targetType)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get likes count: %w", err)
+		return 0, err
 	}
 	_ = s.cache.Set(key, likeCount, 5*time.Minute)
 	return likeCount, nil
@@ -66,11 +68,11 @@ func (s *implLikeService) GetLikesCountFromTarget(ctx context.Context, targetID 
 
 func (s *implLikeService) DeleteLike(ctx context.Context, like *models.Like) error {
 	if like == nil {
-		return errors.New("invalid like")
+		return ErrInvalidLike
 	}
 	key := fmt.Sprintf(likesCountCacheKeyFormat, like.TargetType, like.TargetID)
 	if err := s.likeRepo.DeleteLike(ctx, like); err != nil {
-		return fmt.Errorf("failed to delete like: %w", err)
+		return err
 	}
 	_ = s.cache.Delete(key)
 	return nil

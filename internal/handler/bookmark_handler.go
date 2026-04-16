@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
@@ -40,7 +41,7 @@ func (bh *implBookmarkHandler) CreateBookmark(w http.ResponseWriter, r *http.Req
 	}
 	bookmark := models.NewBookmark(postID, userID)
 	if err := bh.bookmarkService.CreateBookmark(r.Context(), bookmark); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error creating bookmark", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, bookmark, http.StatusCreated)
@@ -60,7 +61,11 @@ func (bh *implBookmarkHandler) DeleteBookmark(w http.ResponseWriter, r *http.Req
 	}
 	bookmark := models.NewBookmark(postID, userID)
 	if err := bh.bookmarkService.DeleteBookmark(r.Context(), bookmark); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, database.ErrBookmarkNotFound) {
+			http.Error(w, "bookmark not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "error deleting bookmark", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -84,7 +89,11 @@ func (bh *implBookmarkHandler) GetPostsFromUsersBookmark(w http.ResponseWriter, 
 	}
 	posts, err := bh.bookmarkService.GetPostsFromUsersBookmarks(r.Context(), userID, limit, offset)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, "invalid user id", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching bookmarked posts", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, posts, http.StatusOK)

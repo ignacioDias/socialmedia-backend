@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
@@ -24,6 +23,8 @@ type implFollowingService struct {
 	cache         *cache.Cache
 }
 
+var ErrSelfFollow = fmt.Errorf("cannot follow yourself")
+
 func NewFollowingService(followingRepo database.FollowRepository, cache *cache.Cache) FollowingService {
 	return &implFollowingService{
 		followingRepo: followingRepo,
@@ -33,7 +34,7 @@ func NewFollowingService(followingRepo database.FollowRepository, cache *cache.C
 
 func (s *implFollowingService) CreateFollow(ctx context.Context, follow *models.Follow) error {
 	if follow.FollowerID == follow.FollowingID {
-		return errors.New("can't follow yourself")
+		return ErrSelfFollow
 	}
 	if err := s.followingRepo.CreateFollow(ctx, follow); err != nil {
 		return err
@@ -57,16 +58,22 @@ func (s *implFollowingService) DeleteFollow(ctx context.Context, follow *models.
 }
 
 func (s *implFollowingService) GetFollowersFromID(ctx context.Context, userID int64, limit, offset int) ([]models.User, error) {
+	if userID <= 0 {
+		return nil, ErrInvalidID
+	}
 	return s.followingRepo.GetFollowersFromUserID(ctx, userID, limit, offset)
 }
 
 func (s *implFollowingService) GetFollowingFromID(ctx context.Context, userID int64, limit, offset int) ([]models.User, error) {
+	if userID <= 0 {
+		return nil, ErrInvalidID
+	}
 	return s.followingRepo.GetFollowingFromUserID(ctx, userID, limit, offset)
 }
 
 func (s *implFollowingService) GetCountFollowers(ctx context.Context, userID int64) (int, error) {
 	if userID <= 0 {
-		return 0, errors.New("invalid user ID")
+		return 0, ErrInvalidID
 	}
 	key := fmt.Sprintf("followersCount:%d", userID)
 	var followersCount int
@@ -84,7 +91,7 @@ func (s *implFollowingService) GetCountFollowers(ctx context.Context, userID int
 
 func (s *implFollowingService) GetCountFollowing(ctx context.Context, userID int64) (int, error) {
 	if userID <= 0 {
-		return 0, errors.New("invalid user ID")
+		return 0, ErrInvalidID
 	}
 	key := fmt.Sprintf("followingCount:%d", userID)
 	var followingCount int

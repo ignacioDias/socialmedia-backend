@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
@@ -42,7 +41,7 @@ func (s *implPostService) CreatePost(ctx context.Context, post *models.Post) err
 
 func (s *implPostService) GetPostFromID(ctx context.Context, postID int64) (*models.Post, error) {
 	if postID <= 0 {
-		return nil, errors.New("invalid ID")
+		return nil, ErrInvalidID
 	}
 	key := fmt.Sprintf("post:%d", postID)
 	var post *models.Post
@@ -58,7 +57,7 @@ func (s *implPostService) GetPostFromID(ctx context.Context, postID int64) (*mod
 }
 func (s *implPostService) DeletePost(ctx context.Context, postID, userID int64) error {
 	if userID <= 0 || postID <= 0 {
-		return errors.New("invalid ID")
+		return ErrInvalidID
 	}
 	if err := s.postRepo.DeletePostByID(ctx, postID, userID); err != nil {
 		return err
@@ -70,14 +69,14 @@ func (s *implPostService) DeletePost(ctx context.Context, postID, userID int64) 
 
 func (s *implPostService) GetPostsFromUser(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
 	if userID <= 0 {
-		return nil, errors.New("invalid ID")
+		return nil, ErrInvalidID
 	}
 	return s.postRepo.GetPostsByUserID(ctx, userID, limit, offset)
 }
 
 func (s *implPostService) GetPostsFromFollowing(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
 	if userID <= 0 {
-		return nil, errors.New("invalid ID")
+		return nil, ErrInvalidID
 	}
 	return s.postRepo.GetPostsFromFollows(ctx, userID, limit, offset)
 }

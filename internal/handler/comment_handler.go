@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
@@ -50,7 +51,7 @@ func (ch *implCommentHandler) CreateCommentForPost(w http.ResponseWriter, r *htt
 	}
 	comment := models.NewComment(postID, models.PostTarget, userID, commentReq.Content, commentReq.ImagePath)
 	if err := ch.commentService.CreateComment(r.Context(), comment); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error creating comment", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, comment, http.StatusCreated)
@@ -75,7 +76,7 @@ func (ch *implCommentHandler) CreateCommentForComment(w http.ResponseWriter, r *
 	}
 	comment := models.NewComment(commentID, models.CommentTarget, userID, commentReq.Content, commentReq.ImagePath)
 	if err := ch.commentService.CreateComment(r.Context(), comment); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "error creating comment", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, comment, http.StatusCreated)
@@ -90,7 +91,15 @@ func (ch *implCommentHandler) GetComment(w http.ResponseWriter, r *http.Request)
 	}
 	comment, err := ch.commentService.GetCommentByID(r.Context(), commentID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, database.ErrCommentNotFound) {
+			http.Error(w, "comment not found", http.StatusNotFound)
+			return
+		}
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, "invalid comment ID", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching comment", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, comment, http.StatusOK)
@@ -114,7 +123,11 @@ func (ch *implCommentHandler) GetCommentsFromPost(w http.ResponseWriter, r *http
 	}
 	comments, err := ch.commentService.GetCommentsFromTarget(r.Context(), postID, models.PostTarget, limit, offset)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, "invalid post ID", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching comments", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, comments, http.StatusOK)
@@ -138,7 +151,11 @@ func (ch *implCommentHandler) GetCommentsFromComment(w http.ResponseWriter, r *h
 	}
 	comments, err := ch.commentService.GetCommentsFromTarget(r.Context(), commentID, models.CommentTarget, limit, offset)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, "invalid comment ID", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching comments", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, comments, http.StatusOK)
@@ -156,7 +173,15 @@ func (ch *implCommentHandler) DeleteComment(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if err := ch.commentService.DeleteCommentByID(r.Context(), commentID, userID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, "invalid comment ID", http.StatusBadRequest)
+			return
+		}
+		if errors.Is(err, database.ErrCommentNotFound) {
+			http.Error(w, "comment not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "error deleting comment", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -179,7 +204,11 @@ func (ch *implCommentHandler) GetCommentsFromUser(w http.ResponseWriter, r *http
 	}
 	comments, err := ch.commentService.GetCommentsFromUser(r.Context(), userID, limit, offset)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, "invalid user ID", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching comments", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, comments, http.StatusOK)

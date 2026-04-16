@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
@@ -50,7 +51,11 @@ func (fh *implFollowingHandler) FollowUser(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := fh.followingService.CreateFollow(r.Context(), follow); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrSelfFollow) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error creating follow", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, follow, http.StatusCreated)
@@ -62,7 +67,11 @@ func (fh *implFollowingHandler) UnfollowUser(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if err := fh.followingService.DeleteFollow(r.Context(), follow); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, database.ErrFollowNotFound) {
+			http.Error(w, "follow not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "error deleting follow", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -87,7 +96,11 @@ func (fh *implFollowingHandler) GetFollowers(w http.ResponseWriter, r *http.Requ
 	}
 	users, err := fh.followingService.GetFollowersFromID(r.Context(), userID, limit, offset)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching followers", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, users, http.StatusOK)
@@ -112,7 +125,11 @@ func (fh *implFollowingHandler) GetFollowing(w http.ResponseWriter, r *http.Requ
 	}
 	users, err := fh.followingService.GetFollowingFromID(r.Context(), userID, limit, offset)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching following", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, users, http.StatusOK)
@@ -126,7 +143,11 @@ func (fh *implFollowingHandler) GetCantFollowers(w http.ResponseWriter, r *http.
 	}
 	followers, err := fh.followingService.GetCountFollowers(r.Context(), userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, "invalid user ID", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching follower count", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, followers, http.StatusOK)
@@ -140,7 +161,11 @@ func (fh *implFollowingHandler) GetCantFollowing(w http.ResponseWriter, r *http.
 	}
 	following, err := fh.followingService.GetCountFollowing(r.Context(), userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrInvalidID) {
+			http.Error(w, "invalid user ID", http.StatusBadRequest)
+			return
+		}
+		http.Error(w, "error fetching following count", http.StatusInternalServerError)
 		return
 	}
 	WriteResponseWithEncoder(w, following, http.StatusOK)

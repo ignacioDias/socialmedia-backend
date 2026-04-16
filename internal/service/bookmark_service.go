@@ -34,5 +34,8 @@ func (s *implBookmarkService) DeleteBookmark(ctx context.Context, bookmark *mode
 }
 
 func (s *implBookmarkService) GetPostsFromUsersBookmarks(ctx context.Context, userID int64, limit, offset int) ([]models.Post, error) {
+	if userID <= 0 {
+		return nil, ErrInvalidID
+	}
 	return s.bookmarkRepo.GetPostsFromUsersBookmark(ctx, userID, limit, offset)
 }
