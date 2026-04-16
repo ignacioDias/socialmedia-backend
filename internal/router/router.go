@@ -14,6 +14,7 @@ type Router struct {
 	followingHandler handler.FollowingHandler
 	messageHandler   handler.MessageHandler
 	postHandler      handler.PostHandler
+	uploadHandler    handler.UploadHandler
 	commentHandler   handler.CommentHandler
 	bookmarkHandler  handler.BookmarkHandler
 	likeHandler      handler.LikeHandler
@@ -32,6 +33,7 @@ func NewRouter(db *database.Database, cache *cache.Cache) *Router {
 		userHandler:      handler.NewUserHandler(db.UserRepo, db.SessionRepo, cache),
 		likeHandler:      handler.NewLikeHandler(db.LikeRepo, cache),
 		messageHandler:   handler.NewMessageHandler(db.MessageRepo, cache),
+		uploadHandler:    handler.NewUploadHandler(),
 		followingHandler: handler.NewFollowingHandler(db.FollowRepo, cache),
 	}
 }
@@ -52,7 +54,7 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 
 	r.mux.HandleFunc("GET /api/v1/users/{user_id}", r.userHandler.GetUserByID)
 
-	r.mux.HandleFunc("POST /api/v1/upload", r.rateLimit.RateLimit(r.authenticationMw.AuthenticationMiddleware(uploadHandler)))
+	r.mux.HandleFunc("POST /api/v1/upload", r.rateLimit.RateLimit(r.authenticationMw.AuthenticationMiddleware(r.uploadHandler.Upload)))
 
 	//following
 	r.mux.HandleFunc("POST /api/v1/following/follow/{user_id}", r.authenticationMw.AuthenticationMiddleware(r.followingHandler.FollowUser))
@@ -105,8 +107,4 @@ func (r *Router) SetupRoutes() *http.ServeMux {
 	r.mux.HandleFunc("GET /api/v1/comments/{comment_id}/likes/count", r.likeHandler.GetLikesCountFromComment)
 
 	return r.mux
-}
-
-func uploadHandler(w http.ResponseWriter, r *http.Request) {
-
 }

@@ -21,15 +21,18 @@ type RateLimiter struct {
 	maxTokens      float64   // Maximum tokens allowed
 	refillRate     float64   // Tokens added per second
 	lastRefillTime time.Time // Last time tokens were refilled
+	lastAccessTime time.Time // Last time this limiter was accessed
 	mutex          sync.Mutex
 }
 
 func NewRateLimiter(maxTokens, refillRate float64) *RateLimiter {
+	now := time.Now()
 	return &RateLimiter{
 		tokens:         maxTokens,
 		maxTokens:      maxTokens,
 		refillRate:     refillRate,
-		lastRefillTime: time.Now(),
+		lastRefillTime: now,
+		lastAccessTime: now,
 	}
 }
 func NewIPRateLimiter() *IPRateLimiter {
@@ -48,14 +51,29 @@ func (i *IPRateLimiter) GetLimiter(ip string) *RateLimiter {
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
 
+	i.cleanupOldLimiters()
+
 	limiter, exists := i.limiters[ip]
 	if !exists {
 		// Allow 3 requests per minute
 		limiter = NewRateLimiter(3, 0.05)
 		i.limiters[ip] = limiter
+	} else {
+		// Update last access time
+		limiter.lastAccessTime = time.Now()
 	}
 
 	return limiter
+}
+
+// cleanupOldLimiters removes entries not accessed in the last 24 hours (call while holding mutex)
+func (i *IPRateLimiter) cleanupOldLimiters() {
+	cutoff := time.Now().Add(-24 * time.Hour)
+	for ip, limiter := range i.limiters {
+		if limiter.lastAccessTime.Before(cutoff) {
+			delete(i.limiters, ip)
+		}
+	}
 }
 func (r *RateLimiter) Allow() bool {
 	r.mutex.Lock()

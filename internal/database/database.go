@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS reposts(
 	image_path TEXT,
 	created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (post_id, user_id)
-)`
+);`
 var createBookmarksTable = `
 CREATE TABLE IF NOT EXISTS bookmarks(
 	post_id BIGINT NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
