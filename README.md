@@ -4,7 +4,7 @@ SocialNet is a modular REST API for a social platform built with Go. It includes
 
 A simple clone of twitter.
 
-[![bender](https://media.pinatafarm.com/protected/65CA2375-85F2-4AA2-97D1-499E73E0306D/ae971de6-b960-4907-b971-d1a5729af689-1675288359906-pfarm-with-png-watermarked.webp)](https://media.pinatafarm.com/protected/65CA2375-85F2-4AA2-97D1-499E73E0306D/ae971de6-b960-4907-b971-d1a5729af689-1675288359906-pfarm-with-png-watermarked.webp)
+[![bender](https://imgflip.com/s/meme/Bender.jpg)](https://imgflip.com/s/meme/Bender.jpg)
 
 
 ## Features
