@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"socialnet/internal/cache"
 	"socialnet/internal/database"
 	"socialnet/internal/middleware"
@@ -27,6 +28,8 @@ type UserHandler interface {
 type implUserHandler struct {
 	userService service.UserService
 }
+
+var isProduction = os.Getenv("ENV") == "production"
 
 func NewUserHandler(userRepo database.UserRepository, sessionRepo database.SessionRepository, cache *cache.Cache) UserHandler {
 	return &implUserHandler{
@@ -66,7 +69,7 @@ func (uh *implUserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		Value:    session.ID,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false, // false only in localhost dev
+		Secure:   isProduction,
 		SameSite: http.SameSiteStrictMode,
 		Expires:  session.ExpiresAt,
 	})
@@ -87,7 +90,7 @@ func (uh *implUserHandler) LogoutUser(w http.ResponseWriter, r *http.Request) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   isProduction,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   -1,
 	})
